@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>One Move Left</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="title">ONE MOVE LEFT</div>
+        <div class="sub">Limited moves. Clear the mission.</div>
+      </div>
+
+      <div class="stats">
+        <div class="pill"><div class="label">SCORE</div><div class="value" id="score">0</div></div>
+        <div class="pill"><div class="label">BEST</div><div class="value" id="best">0</div></div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <button class="btn primary" id="nextBtn">Start / Next</button>
+      <button class="btn" id="retryBtn">Retry</button>
+      <button class="btn" id="soundBtn">🔊 Sound</button>
+      <button class="btn ghost" id="howBtn">❓ How</button>
+      <button class="btn ghost" id="hintBtn">💡 Hint</button>
+      <button class="btn ghost" id="themeBtn">🎨 Theme</button>
+    </div>
+
+    <div class="bannerSlot">
+      <div id="banner" class="banner" aria-live="polite"></div>
+    </div>
+
+    <div class="layout">
+      <!-- Mission panel -->
+      <aside class="mission">
+        <div class="missionCard">
+          <div class="mTop">
+            <div class="mTitle">Mission</div>
+            <div class="mLevel">Level <span id="level">1</span></div>
+          </div>
+
+          <div class="mRow">
+            <div class="mLabel">Moves left</div>
+            <div class="mValue neon" id="movesLeft">3</div>
+          </div>
+
+          <div class="mRow">
+            <div class="mLabel">Goal</div>
+            <div class="mValue" id="goalText">Pop 8 tiles</div>
+          </div>
+
+          <div class="mRow">
+            <div class="mLabel">Remaining</div>
+            <div class="mValue neon" id="goalRemaining">8</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Board -->
+      <main class="boardWrap">
+        <div id="board" class="board" role="application" aria-label="One Move Left board"></div>
+
+        <div id="overlay" class="overlay">
+          <div class="card">
+            <h3 id="overlayTitle">Level Complete</h3>
+            <div id="overlayBody" class="body"></div>
+            <div class="row">
+              <button class="btn" id="closeOverlay">Close</button>
+              <button class="btn primary" id="overlayPrimary">Next</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <footer>
+      <div class="hint">Tip: One swipe can trigger multiple pops. Look for chain setups.</div>
+    </footer>
+  </div>
+
+  <script src="scripts.js"></script>
+</body>
+</html>
