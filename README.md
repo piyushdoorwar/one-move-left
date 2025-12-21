@@ -79,6 +79,22 @@ Levels have specific goals that must be achieved:
 - Neon-themed visual effects
 - Progressive difficulty levels
 
+## Progressive Web App (PWA)
+
+This game is now a Progressive Web App with the following features:
+- **Installable**: Can be installed on mobile devices and desktops
+- **Offline Play**: Works offline thanks to service worker caching
+- **Responsive Design**: Optimized for all screen sizes
+- **Fast Loading**: Cached resources for quick startup
+
+### PWA Setup Notes
+- The app includes a web app manifest (`manifest.json`) and service worker (`sw.js`)
+- SVG favicon (`favicon.svg`) has been added for browser tabs
+- For full PWA installation support, PNG icons should be created:
+  - `icon-192.png` (192x192 pixels)
+  - `icon-512.png` (512x512 pixels)
+- For production deployment, serve over HTTPS for full PWA functionality
+
 ## Setup and Installation
 
 1. Clone or download the repository
