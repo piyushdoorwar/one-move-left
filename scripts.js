@@ -1033,7 +1033,9 @@
       <b>Remaining:</b> ${goalRemainingText(goal)}<br><br>
       Retry this level?
     `;
+    closeOverlay.style.display = 'none';
     overlayPrimary.textContent = "Retry";
+    overlayPrimary.style.display = 'inline-block';
     overlay.classList.add("show");
   }
 
