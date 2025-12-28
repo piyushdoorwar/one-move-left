@@ -1239,6 +1239,10 @@ function trackEvent(eventName, parameters = {}) {
     generateSolvableLevel(level);
   });
   retryBtn.addEventListener("click", () => {
+    trackEvent('level_retry', {
+      level: level,
+      has_saved_level: !!(currentLevelGrid && currentLevelGoal && currentLevelMoves > 0)
+    });
     if (currentLevelGrid && currentLevelGoal && currentLevelMoves > 0) {
       loadStoredLevel();
     } else {
@@ -1250,6 +1254,9 @@ function trackEvent(eventName, parameters = {}) {
     soundOn = !soundOn;
     localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
     refreshSoundBtn();
+    trackEvent('sound_toggle', {
+      sound_enabled: soundOn
+    });
     if (soundOn) { initAudio(); goodSound(); banner("Sound on", "move"); }
     else banner("Muted", "move");
   });
@@ -1261,6 +1268,7 @@ function trackEvent(eventName, parameters = {}) {
   });
 
   howBtn.addEventListener("click", () => {
+    trackEvent('help_opened');
     overlayTitle.textContent = "How to Play";
     let body = `
       <ul style="margin:0; padding-left:18px;">

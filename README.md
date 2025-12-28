@@ -108,8 +108,9 @@ The game supports Google sign-in for cloud saving of progress across devices. To
 1. Create a Firebase project at https://console.firebase.google.com/
 2. Enable Google Authentication in Authentication > Sign-in method
 3. Enable Firestore Database in Firestore Database
-4. Get your Firebase config from Project settings > General > Your apps
-5. Replace the placeholder config in `index.html` with your actual Firebase config:
+4. Enable Analytics in Analytics > Dashboard (automatically enabled with Firebase)
+5. Get your Firebase config from Project settings > General > Your apps
+6. Replace the placeholder config in `index.html` with your actual Firebase config:
    ```javascript
    const firebaseConfig = {
      apiKey: "YOUR_API_KEY",
