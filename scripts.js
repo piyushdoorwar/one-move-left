@@ -43,11 +43,18 @@
 
   function updateSignInButton() {
     if (currentUser) {
-      signinBtn.textContent = `👤 ${currentUser.displayName || 'User'}`;
+      const displayName = currentUser.displayName || currentUser.email || 'User';
+      signinBtn.textContent = `👤 ${displayName}`;
       signinBtn.setAttribute("aria-pressed", "true");
+      signinBtn.disabled = true;
+      signinBtn.style.opacity = "0.7";
+      signinBtn.title = "Signed in - progress auto-saved";
     } else {
       signinBtn.textContent = "👤 Sign In";
       signinBtn.setAttribute("aria-pressed", "false");
+      signinBtn.disabled = false;
+      signinBtn.style.opacity = "1";
+      signinBtn.title = "Sign in with Google to save progress";
     }
   }
 
@@ -59,7 +66,7 @@
 
     try {
       const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseProvider);
-      banner(`Welcome, ${result.user.displayName}!`, "move");
+      banner(`Welcome, ${result.user.displayName || 'User'}! Progress will be saved.`, "move");
     } catch (error) {
       console.error("Sign-in error:", error);
       banner("Sign-in failed", "move");
@@ -122,7 +129,7 @@
             if (theme === "ubuntu") document.body.classList.add("ubuntu-theme");
           }
 
-          banner(`Loaded progress: Level ${data.level}`, "move");
+          banner(`Loaded saved progress: Level ${data.level}`, "move");
           generateSolvableLevel(level);
           return;
         }
@@ -1219,16 +1226,14 @@
   });
 
   signinBtn.addEventListener("click", () => {
-    if (currentUser) {
-      signOutUser();
-    } else {
+    if (!currentUser) {
       signInWithGoogle();
     }
   });
 
   howBtn.addEventListener("click", () => {
     overlayTitle.textContent = "How to Play";
-    overlayBody.innerHTML = `
+    let body = `
       <ul style="margin:0; padding-left:18px;">
         <li>Each level has a <b>move limit</b>.</li>
         <li>Swipe to slide orbs.</li>
@@ -1237,6 +1242,16 @@
         <li>Levels are <b>generated solvable</b>.</li>
       </ul>
     `;
+
+    if (currentUser) {
+      body += `<br><div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; margin-top: 10px;">
+        <b>Signed in as:</b> ${currentUser.displayName || currentUser.email}<br>
+        <small>Your progress is automatically saved to the cloud.</small><br>
+        <button class="btn" id="signOutBtn" style="margin-top: 8px;">Sign Out</button>
+      </div>`;
+    }
+
+    overlayBody.innerHTML = body;
     overlayPrimary.textContent = "Close";
     closeOverlay.style.display = '';
     overlayPrimary.style.display = 'none';
@@ -1260,6 +1275,15 @@
     closeOverlay.style.display = '';
     overlayPrimary.style.display = 'none';
     overlay.classList.add("show");
+
+    // Add sign-out button listener if it exists
+    const signOutBtn = qs("#signOutBtn");
+    if (signOutBtn) {
+      signOutBtn.addEventListener("click", () => {
+        signOutUser();
+        overlay.classList.remove("show");
+      });
+    }
   });
 
   closeOverlay.addEventListener("click", () => overlay.classList.remove("show"));
