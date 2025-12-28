@@ -24,7 +24,7 @@
   const overlayBody = qs("#overlayBody");
   const closeOverlay = qs("#closeOverlay");
   const overlayPrimary = qs("#overlayPrimary");
-  const signinBtn = qs("#signinBtn");
+  const profileDisplay = qs("#profileDisplay");
 
   // ===== Firebase Auth & Cloud Save =====
   let currentUser = null;
@@ -32,36 +32,34 @@
   function initFirebase() {
     if (!window.firebaseAuth) return; // Firebase not loaded
 
-    window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+    window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
       currentUser = user;
-      updateSignInButton();
+      updateProfileDisplay();
       if (user) {
-        loadCloudProgress();
+        hideOverlay();
+        await loadCloudProgress();
+        startGame();
+      } else {
+        showSignInOverlay();
       }
     });
   }
 
-  function updateSignInButton() {
+  function updateProfileDisplay() {
     if (currentUser) {
       const displayName = currentUser.displayName || currentUser.email || 'User';
       const photoURL = currentUser.photoURL;
 
       if (photoURL) {
-        signinBtn.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">`;
+        profileDisplay.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">${displayName}`;
       } else {
-        signinBtn.textContent = `👤 ${displayName}`;
+        profileDisplay.textContent = `👤 ${displayName}`;
       }
 
-      signinBtn.setAttribute("aria-pressed", "true");
-      signinBtn.disabled = true;
-      signinBtn.style.opacity = "0.7";
-      signinBtn.title = `Signed in as ${displayName} - progress auto-saved`;
+      profileDisplay.title = `Signed in as ${displayName} - progress auto-saved`;
     } else {
-      signinBtn.innerHTML = '👤 Sign In';
-      signinBtn.setAttribute("aria-pressed", "false");
-      signinBtn.disabled = false;
-      signinBtn.style.opacity = "1";
-      signinBtn.title = "Sign in with Google to save progress";
+      profileDisplay.innerHTML = '';
+      profileDisplay.title = '';
     }
   }
 
@@ -115,7 +113,7 @@
   }
 
   async function loadCloudProgress() {
-    if (!currentUser || !window.firebaseDb) return;
+    if (!currentUser || !window.firebaseDb) return false;
 
     try {
       const docSnap = await window.firebaseGetDoc(window.firebaseDoc(window.firebaseDb, "progress", currentUser.uid));
@@ -142,18 +140,17 @@
 
           banner(`Loaded saved progress: Level ${data.level}`, "move");
           generateSolvableLevel(level);
-          return;
+          return true;
         }
       }
     } catch (error) {
       console.error("Load error:", error);
     }
+    return false;
   }
   const LS_BEST = "onemoveleft:best";
   const LS_SOUND = "onemoveleft:soundOn";
   const LS_THEME = "onemoveleft:theme";
-  const LS_LEVEL = "onemoveleft:level";
-  const LS_SCORE = "onemoveleft:score";
 
   let best = parseInt(localStorage.getItem(LS_BEST) || "0", 10);
   bestEl.textContent = best;
@@ -166,32 +163,29 @@
 
   // ===== Game state save/load =====
   function saveGameState() {
-    localStorage.setItem(LS_LEVEL, String(level));
-    localStorage.setItem(LS_SCORE, String(score));
-
-    // Also save to cloud if signed in
+    // Only save to cloud if signed in
     if (currentUser) {
       saveCloudProgress();
     }
   }
 
   function loadGameState() {
-    const savedLevel = parseInt(localStorage.getItem(LS_LEVEL) || "1", 10);
-    const savedScore = parseInt(localStorage.getItem(LS_SCORE) || "0", 10);
-
-    if (savedLevel > 1 || savedScore > 0) {
-      // Load saved progress
-      setLevel(savedLevel);
-      setScore(savedScore);
-      generateSolvableLevel(savedLevel);
-      return true;
+    // Only load from cloud if signed in
+    if (currentUser) {
+      return loadCloudProgress();
     }
     return false;
   }
 
-  function clearGameState() {
-    localStorage.removeItem(LS_LEVEL);
-    localStorage.removeItem(LS_SCORE);
+  async function startGame() {
+    trackEvent('game_start', {
+      user_agent: navigator.userAgent,
+      referrer: document.referrer
+    });
+    const loaded = await loadCloudProgress();
+    if (!loaded) {
+      generateSolvableLevel(1);
+    }
   }
 
   // ===== Audio (no asset files) =====
@@ -351,8 +345,23 @@ function trackEvent(eventName, parameters = {}) {
     overlay.classList.add("show");
   }
 
-  function hideOverlay() {
-    overlay.classList.remove("show");
+  function showSignInOverlay() {
+    overlayTitle.textContent = "Sign In Required";
+    overlayBody.innerHTML = `
+      <div style="text-align:center; color: rgba(255,255,255,.70)">
+        Sign in with Google to save your progress and play One Move Left.
+      </div>
+      <button class="btn primary" id="signInOverlayBtn" style="margin-top: 20px;">Sign In with Google</button>
+    `;
+    overlayPrimary.style.display = 'none';
+    closeOverlay.style.display = 'none';
+    overlay.classList.add("show");
+
+    // Add event listener for the sign-in button
+    const signInBtn = qs("#signInOverlayBtn");
+    signInBtn.addEventListener("click", () => {
+      signInWithGoogle();
+    });
   }
 
   // ===== Layout: dynamic board size =====
@@ -1232,10 +1241,6 @@ function trackEvent(eventName, parameters = {}) {
 
   // ===== Buttons & overlay actions =====
   nextBtn.addEventListener("click", () => {
-    if (level === 1 && score === 0) {
-      // Starting fresh - clear any saved state
-      clearGameState();
-    }
     generateSolvableLevel(level);
   });
   retryBtn.addEventListener("click", () => {
@@ -1261,12 +1266,6 @@ function trackEvent(eventName, parameters = {}) {
     else banner("Muted", "move");
   });
 
-  signinBtn.addEventListener("click", () => {
-    if (!currentUser) {
-      signInWithGoogle();
-    }
-  });
-
   howBtn.addEventListener("click", () => {
     trackEvent('help_opened');
     overlayTitle.textContent = "How to Play";
@@ -1285,10 +1284,6 @@ function trackEvent(eventName, parameters = {}) {
         <b>Signed in as:</b> ${currentUser.displayName || currentUser.email}<br>
         <small>Your progress and score are automatically saved to the cloud and will sync across devices.</small><br>
         <button class="btn" id="signOutBtn" style="margin-top: 8px;">Sign Out</button>
-      </div>`;
-    } else {
-      body += `<br><div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; margin-top: 10px;">
-        <small>Sign in with Google to save your progress and score to the cloud!</small>
       </div>`;
     }
 
@@ -1417,14 +1412,5 @@ function trackEvent(eventName, parameters = {}) {
     });
   }
 
-  // ===== Start =====
   initFirebase();
-  trackEvent('game_start', {
-    user_agent: navigator.userAgent,
-    referrer: document.referrer
-  });
-  if (!loadGameState()) {
-    // No saved state, start fresh
-    generateSolvableLevel(1);
-  }
 })();
