@@ -73,8 +73,7 @@
 
     try {
       const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseProvider);
-      banner(`Signed in as ${result.user.displayName || 'User'}!`, "move");
-      // Progress will be loaded automatically via onAuthStateChanged
+      banner(`Welcome, ${result.user.displayName || 'User'}! Progress will be saved.`, "move");
     } catch (error) {
       console.error("Sign-in error:", error);
       banner("Sign-in failed", "move");
@@ -86,19 +85,7 @@
 
     try {
       await window.firebaseSignOut(window.firebaseAuth);
-      // Clear current game state and restart
-      level = 1;
-      score = 0;
-      setLevel(1);
-      setScore(0);
-      // Clear any cached level data
-      currentLevelGrid = null;
-      currentLevelGoal = null;
-      currentLevelMoves = 0;
-      solutionMoves = null;
-      banner("Signed out - progress saved locally", "move");
-      // Restart the game
-      generateSolvableLevel(1);
+      banner("Signed out", "move");
     } catch (error) {
       console.error("Sign-out error:", error);
     }
@@ -130,7 +117,7 @@
       const docSnap = await window.firebaseGetDoc(window.firebaseDoc(window.firebaseDb, "progress", currentUser.uid));
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.level && data.level >= 1) {
+        if (data.level && data.level > level) {
           setLevel(data.level);
           setScore(data.score || 0);
           best = Math.max(best, data.best || 0);
@@ -149,7 +136,7 @@
             if (theme === "ubuntu") document.body.classList.add("ubuntu-theme");
           }
 
-          banner(`Welcome back, ${currentUser.displayName || 'User'}! Resuming from level ${data.level}`, "move");
+          banner(`Loaded saved progress: Level ${data.level}`, "move");
           generateSolvableLevel(level);
           return;
         }
@@ -175,34 +162,27 @@
 
   // ===== Game state save/load =====
   function saveGameState() {
+    localStorage.setItem(LS_LEVEL, String(level));
+    localStorage.setItem(LS_SCORE, String(score));
+
+    // Also save to cloud if signed in
     if (currentUser) {
-      // Save to Firebase for signed-in users
       saveCloudProgress();
-    } else {
-      // Fallback to localStorage for non-signed-in users
-      localStorage.setItem(LS_LEVEL, String(level));
-      localStorage.setItem(LS_SCORE, String(score));
     }
   }
 
   function loadGameState() {
-    if (currentUser) {
-      // For signed-in users, progress is loaded via loadCloudProgress() in onAuthStateChanged
-      // Don't load from localStorage to avoid conflicts
-      return false;
-    } else {
-      // Load from localStorage for non-signed-in users
-      const savedLevel = parseInt(localStorage.getItem(LS_LEVEL) || "1", 10);
-      const savedScore = parseInt(localStorage.getItem(LS_SCORE) || "0", 10);
+    const savedLevel = parseInt(localStorage.getItem(LS_LEVEL) || "1", 10);
+    const savedScore = parseInt(localStorage.getItem(LS_SCORE) || "0", 10);
 
-      if (savedLevel > 1 || savedScore > 0) {
-        setLevel(savedLevel);
-        setScore(savedScore);
-        generateSolvableLevel(savedLevel);
-        return true;
-      }
-      return false;
+    if (savedLevel > 1 || savedScore > 0) {
+      // Load saved progress
+      setLevel(savedLevel);
+      setScore(savedScore);
+      generateSolvableLevel(savedLevel);
+      return true;
     }
+    return false;
   }
 
   function clearGameState() {
@@ -1405,37 +1385,8 @@
 
   // ===== Start =====
   initFirebase();
-  // Wait for Firebase auth to initialize, then start the game
-  let gameStarted = false;
-  const startGame = () => {
-    if (gameStarted) return;
-    gameStarted = true;
-
-    if (currentUser) {
-      // Signed-in user - progress will be loaded via loadCloudProgress()
-      // Just start with level 1 if no saved progress
-      generateSolvableLevel(1);
-    } else {
-      // Not signed in - try loading from localStorage
-      if (!loadGameState()) {
-        generateSolvableLevel(1);
-      }
-    }
-  };
-
-  // Check if Firebase is already initialized
-  if (window.firebaseAuth) {
-    window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
-      currentUser = user;
-      updateSignInButton();
-      if (user) {
-        loadCloudProgress();
-      } else {
-        startGame();
-      }
-    });
-  } else {
-    // Fallback if Firebase fails to load
-    startGame();
+  if (!loadGameState()) {
+    // No saved state, start fresh
+    generateSolvableLevel(1);
   }
 })();
