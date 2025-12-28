@@ -14,17 +14,9 @@
 
   const nextBtn = qs("#nextBtn");
   const retryBtn = qs("#retryBtn");
-  const soundBtn = qs("#soundBtn");
   const howBtn = qs("#howBtn");
   const hintBtn = qs("#hintBtn");
-  const themeBtn = qs("#themeBtn");
-
-  const overlay = qs("#overlay");
-  const overlayTitle = qs("#overlayTitle");
-  const overlayBody = qs("#overlayBody");
-  const closeOverlay = qs("#closeOverlay");
-  const overlayPrimary = qs("#overlayPrimary");
-  const profileDisplay = qs("#profileDisplay");
+  const settingsBtn = qs("#settingsBtn");
 
   // ===== Constants =====
   const LS_BEST = "onemoveleft:best";
@@ -69,16 +61,92 @@
     closeOverlay.style.display = "inline-block";
   }
 
-  function initFirebase() {
-    // Always update profile display initially (assume not signed in)
-    updateProfileDisplay(null);
+  function showSettingsOverlay() {
+    overlayTitle.textContent = "Settings";
+    let body = `
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <button class="btn" id="soundToggleBtn">${soundOn ? "🔊 Sound On" : "🔇 Sound Off"}</button>
+        </div>
+        <div>
+          <button class="btn" id="themeToggleBtn">${theme === "ubuntu" ? "🎨 Ubuntu Theme" : "🎨 Default Theme"}</button>
+        </div>
+        <div>
+    `;
 
+    if (currentUser) {
+      const displayName = currentUser.displayName || currentUser.email || "User";
+      const photoURL = currentUser.photoURL;
+      body += `
+        <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 16px;">
+          <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            ${photoURL ? `<img src="${photoURL}" alt="${displayName}" style="width:32px;height:32px;border-radius:50%;margin-right:12px;">` : '👤'}
+            <span><b>${escapeHtml(displayName)}</b></span>
+          </div>
+          <small style="color: rgba(255,255,255,.7)">Progress auto-saves to cloud</small><br>
+          <button class="btn" id="signOutBtn" style="margin-top: 8px;">Sign Out</button>
+        </div>
+      `;
+    } else {
+      body += `
+        <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 16px;">
+          <button class="btn primary" id="signInBtn">Sign In with Google</button>
+        </div>
+      `;
+    }
+
+    body += `
+        </div>
+      </div>
+    `;
+
+    overlayBody.innerHTML = body;
+    closeOverlay.style.display = '';
+    overlayPrimary.style.display = 'none';
+    overlay.classList.add("show");
+
+    // Event listeners
+    const soundToggleBtn = qs("#soundToggleBtn");
+    soundToggleBtn.addEventListener("click", () => {
+      soundOn = !soundOn;
+      localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
+      soundToggleBtn.textContent = soundOn ? "🔊 Sound On" : "🔇 Sound Off";
+      trackEvent('sound_toggle', { sound_enabled: soundOn });
+      if (soundOn) { initAudio(); goodSound(); banner("Sound on", "move"); }
+      else banner("Muted", "move");
+    });
+
+    const themeToggleBtn = qs("#themeToggleBtn");
+    themeToggleBtn.addEventListener("click", () => {
+      theme = theme === "default" ? "ubuntu" : "default";
+      localStorage.setItem(LS_THEME, theme);
+      document.body.classList.toggle("ubuntu-theme", theme === "ubuntu");
+      themeToggleBtn.textContent = theme === "ubuntu" ? "🎨 Ubuntu Theme" : "🎨 Default Theme";
+      trackEvent('theme_toggle', { theme });
+      banner(`Theme: ${theme}`, "move");
+    });
+
+    if (currentUser) {
+      const signOutBtn = qs("#signOutBtn");
+      signOutBtn.addEventListener("click", () => {
+        signOutUser();
+        overlay.classList.remove("show");
+      });
+    } else {
+      const signInBtn = qs("#signInBtn");
+      signInBtn.addEventListener("click", () => {
+        signInWithGoogle();
+        overlay.classList.remove("show");
+      });
+    }
+  }
+
+  function initFirebase() {
     if (!window.firebaseAuth) return; // Firebase not loaded / blocked
 
     // Firebase auth persistence is set in index.html (browserLocalPersistence).
     window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
       currentUser = user || null;
-      updateProfileDisplay();
 
       if (currentUser) {
         // Auto-restore from cloud if there is a save. If not, keep local.
@@ -86,36 +154,6 @@
         if (loaded) banner("Cloud progress synced.", "move");
       }
     });
-  }
-
-  function updateProfileDisplay() {
-    // Turn the profile pill into a button-like control
-    profileDisplay.setAttribute("role", "button");
-    profileDisplay.style.cursor = "pointer";
-
-    if (currentUser) {
-      const displayName = currentUser.displayName || currentUser.email || "User";
-      const photoURL = currentUser.photoURL;
-
-      profileDisplay.innerHTML = photoURL
-        ? `<img src="${photoURL}" alt="${displayName}" style="width:24px;height:24px;border-radius:50%;margin-right:8px;vertical-align:middle;">${escapeHtml(displayName)}`
-        : `👤 ${escapeHtml(displayName)}`;
-
-      profileDisplay.title = "Signed in • progress auto-saves";
-      profileDisplay.onclick = () => {
-        showConfirmOverlay({
-          title: "Signed in",
-          bodyHtml: `<div style="color: rgba(255,255,255,.70)">Signed in as <b>${escapeHtml(displayName)}</b>.<br><br>Do you want to sign out?</div>`,
-          primaryText: "Sign out",
-          onPrimary: () => signOutUser(),
-          secondaryText: "Keep signed in",
-        });
-      };
-    } else {
-      profileDisplay.innerHTML = "Sign in";
-      profileDisplay.title = "Sign in with Google to sync progress";
-      profileDisplay.onclick = () => signInWithGoogle();
-    }
   }
 
   function escapeHtml(s) {
@@ -197,7 +235,6 @@
     if (typeof state.soundOn === "boolean") {
       soundOn = state.soundOn;
       localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
-      refreshSoundBtn();
     }
     if (state.theme) {
       theme = state.theme;
@@ -1388,15 +1425,8 @@ function trackEvent(eventName, parameters = {}) {
     }
   });
 
-  soundBtn.addEventListener("click", () => {
-    soundOn = !soundOn;
-    localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
-    refreshSoundBtn();
-    trackEvent('sound_toggle', {
-      sound_enabled: soundOn
-    });
-    if (soundOn) { initAudio(); goodSound(); banner("Sound on", "move"); }
-    else banner("Muted", "move");
+  settingsBtn.addEventListener("click", () => {
+    showSettingsOverlay();
   });
 
   howBtn.addEventListener("click", () => {
@@ -1502,11 +1532,6 @@ function trackEvent(eventName, parameters = {}) {
       }
     }
   });
-
-  function refreshSoundBtn() {
-    soundBtn.textContent = soundOn ? "🔊 Sound" : "🔇 Muted";
-    soundBtn.setAttribute("aria-pressed", String(!soundOn));
-  }
 
   // Touch input
   boardEl.addEventListener("touchstart", (e) => {
