@@ -20,10 +20,14 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      }
-    )
+        if (response) {
+          return response;
+        }
+        return fetch(event.request).catch(error => {
+          console.error('Fetch failed:', error);
+          return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+        });
+      })
   );
 });
 

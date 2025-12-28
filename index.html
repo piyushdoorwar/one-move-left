@@ -18,9 +18,9 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-    import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js';
 
     // Firebase configuration
     const firebaseConfig = {
@@ -39,6 +39,9 @@
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
+    // Keep users signed in across refreshes (default is local, but we make it explicit)
+    setPersistence(auth, browserLocalPersistence).catch(console.warn);
+
     // Initialize Analytics (only in production)
     let analytics = null;
     if (window.location.hostname !== 'localhost') {
@@ -48,13 +51,17 @@
     window.firebaseAuth = auth;
     window.firebaseDb = db;
     window.firebaseAnalytics = analytics;
+    window.firebaseLogEvent = logEvent;
     window.firebaseProvider = provider;
     window.firebaseSignInWithPopup = signInWithPopup;
     window.firebaseSignOut = signOut;
     window.firebaseOnAuthStateChanged = onAuthStateChanged;
+    window.firebaseSetPersistence = setPersistence;
+    window.firebaseBrowserLocalPersistence = browserLocalPersistence;
     window.firebaseDoc = doc;
     window.firebaseGetDoc = getDoc;
     window.firebaseSetDoc = setDoc;
+    window.firebaseServerTimestamp = serverTimestamp;
   </script>
 </head>
 <body>

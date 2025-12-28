@@ -26,45 +26,97 @@
   const overlayPrimary = qs("#overlayPrimary");
   const profileDisplay = qs("#profileDisplay");
 
-  // ===== Firebase Auth & Cloud Save =====
+  // ===== Constants =====
+  const LS_BEST = "onemoveleft:best";
+  const LS_SOUND = "onemoveleft:soundOn";
+  const LS_THEME = "onemoveleft:theme";
+
+  // ===== Variables =====
+  let best = parseInt(localStorage.getItem(LS_BEST) || "0", 10);
+  let soundOn = (localStorage.getItem(LS_SOUND) ?? "1") === "1";
+  let theme = localStorage.getItem(LS_THEME) || "default";
+
+  // ===== Firebase Auth, Persistence & Cloud Save =====
   let currentUser = null;
+  let hasBootstrapped = false;
+  let overlayMode = null; // 'confirm' when used for auth prompts
+  let overlayPrimaryCb = null;
+  let overlaySecondaryCb = null;
+
+  // Local (offline) save so the game survives refresh even without login
+  const LS_STATE = "onemoveleft:state:v1";
 
   function hideOverlay() {
     overlay.classList.remove("show");
+    closeOverlay.style.display = "";
+    overlayPrimary.style.display = "";
+    overlayPrimary.style.removeProperty("display");
+  }
+
+  function showConfirmOverlay({ title, bodyHtml, primaryText, onPrimary, secondaryText, onSecondary }) {
+    overlayMode = "confirm";
+    overlayPrimaryCb = onPrimary || null;
+    overlaySecondaryCb = onSecondary || null;
+
+    overlayTitle.textContent = title;
+    overlayBody.innerHTML = bodyHtml;
+    overlay.classList.add("show");
+
+    overlayPrimary.textContent = primaryText || "OK";
+    overlayPrimary.style.display = "inline-block";
+
+    closeOverlay.textContent = secondaryText || "Close";
+    closeOverlay.style.display = "inline-block";
   }
 
   function initFirebase() {
-    if (!window.firebaseAuth) return; // Firebase not loaded
+    if (!window.firebaseAuth) return; // Firebase not loaded / blocked
 
+    // Firebase auth persistence is set in index.html (browserLocalPersistence).
     window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
-      currentUser = user;
+      currentUser = user || null;
       updateProfileDisplay();
-      if (user) {
-        hideOverlay();
-        await loadCloudProgress();
-        startGame();
-      } else {
-        showSignInOverlay();
+
+      if (currentUser) {
+        // Auto-restore from cloud if there is a save. If not, keep local.
+        const loaded = await loadCloudStateAndMaybeApply();
+        if (loaded) banner("Cloud progress synced.", "move");
       }
     });
   }
 
   function updateProfileDisplay() {
+    // Turn the profile pill into a button-like control
+    profileDisplay.setAttribute("role", "button");
+    profileDisplay.style.cursor = "pointer";
+
     if (currentUser) {
-      const displayName = currentUser.displayName || currentUser.email || 'User';
+      const displayName = currentUser.displayName || currentUser.email || "User";
       const photoURL = currentUser.photoURL;
 
-      if (photoURL) {
-        profileDisplay.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">${displayName}`;
-      } else {
-        profileDisplay.textContent = `👤 ${displayName}`;
-      }
+      profileDisplay.innerHTML = photoURL
+        ? `<img src="${photoURL}" alt="${displayName}" style="width:24px;height:24px;border-radius:50%;margin-right:8px;vertical-align:middle;">${escapeHtml(displayName)}`
+        : `👤 ${escapeHtml(displayName)}`;
 
-      profileDisplay.title = `Signed in as ${displayName} - progress auto-saved`;
+      profileDisplay.title = "Signed in • progress auto-saves";
+      profileDisplay.onclick = () => {
+        showConfirmOverlay({
+          title: "Signed in",
+          bodyHtml: `<div style="color: rgba(255,255,255,.70)">Signed in as <b>${escapeHtml(displayName)}</b>.<br><br>Do you want to sign out?</div>`,
+          primaryText: "Sign out",
+          onPrimary: () => signOutUser(),
+          secondaryText: "Keep signed in",
+        });
+      };
     } else {
-      profileDisplay.innerHTML = '';
-      profileDisplay.title = '';
+      profileDisplay.innerHTML = "Sign in";
+      profileDisplay.title = "Sign in with Google to sync progress";
+      profileDisplay.onclick = () => signInWithGoogle();
     }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   }
 
   async function signInWithGoogle() {
@@ -75,11 +127,14 @@
 
     try {
       const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseProvider);
-      banner(`Welcome, ${result.user.displayName || 'User'}! Progress will be saved.`, "move");
-      trackEvent('login', {
-        method: 'google',
-        user_id: result.user.uid
-      });
+      trackEvent("login", { method: "google" });
+
+      // After sign-in, immediately try to load cloud state.
+      // If cloud doesn't exist, we keep local and start saving going forward.
+      const loaded = await loadCloudStateAndMaybeApply();
+      if (!loaded) {
+        banner(`Welcome, ${result.user.displayName || "User"}!`, "move");
+      }
     } catch (error) {
       console.error("Sign-in error:", error);
       banner("Sign-in failed", "move");
@@ -91,108 +146,194 @@
 
     try {
       await window.firebaseSignOut(window.firebaseAuth);
-      banner("Signed out", "move");
+      currentUser = null;
+      updateProfileDisplay();
+      banner("Signed out. Playing offline.", "move");
+      trackEvent("logout");
     } catch (error) {
       console.error("Sign-out error:", error);
     }
   }
 
-  async function saveCloudProgress() {
+  // ---------- Game state (serialize / apply) ----------
+  function serializeGameState() {
+    // store compact grid colors: -1 empty else color index
+    const colors = [];
+    for (let r=0;r<size;r++){
+      const row = [];
+      for (let c=0;c<size;c++){
+        const cell = grid?.[r]?.[c];
+        row.push(cell ? cell.color : -1);
+      }
+      colors.push(row);
+    }
+
+    return {
+      v: 1,
+      level,
+      size,
+      score,
+      best,
+      movesLeft,
+      goal,
+      gridColors: colors,
+      currentLevelGrid,
+      currentLevelGoal,
+      currentLevelMoves,
+      // solutionMoves is optional; omit to keep doc small
+      soundOn,
+      theme,
+      savedAt: new Date().toISOString(),
+    };
+  }
+
+  function applyGameState(state) {
+    if (!state || !state.v) return false;
+
+    // Preferences
+    if (typeof state.soundOn === "boolean") {
+      soundOn = state.soundOn;
+      localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
+      refreshSoundBtn();
+    }
+    if (state.theme) {
+      theme = state.theme;
+      localStorage.setItem(LS_THEME, theme);
+      document.body.classList.toggle("ubuntu-theme", theme === "ubuntu");
+    }
+
+    // Score / best
+    best = Math.max(best, Number(state.best || 0));
+    bestEl.textContent = best;
+    localStorage.setItem(LS_BEST, String(best));
+    setScore(Number(state.score || 0));
+
+    // Level basics
+    setLevel(Number(state.level || 1));
+    size = Number(state.size || 6);
+
+    buildBackgroundGrid();
+    emptyGrid();
+
+    // Restore grid
+    const g = state.gridColors;
+    if (Array.isArray(g) && g.length === size) {
+      for (let r=0;r<size;r++){
+        for (let c=0;c<size;c++){
+          const color = g[r][c];
+          if (typeof color === "number" && color >= 0) {
+            grid[r][c] = mountOrb(r, c, color);
+          }
+        }
+      }
+    }
+
+    // Moves & goal
+    setMoves(Number(state.movesLeft || 0));
+    if (state.goal) setGoal(state.goal);
+
+    // Retry snapshot
+    currentLevelGrid = state.currentLevelGrid ?? currentLevelGrid;
+    currentLevelGoal = state.currentLevelGoal ?? currentLevelGoal;
+    currentLevelMoves = state.currentLevelMoves ?? currentLevelMoves;
+
+    return true;
+  }
+
+  // ---------- Local save (offline) ----------
+  function saveLocalState() {
+    try {
+      localStorage.setItem(LS_STATE, JSON.stringify(serializeGameState()));
+    } catch {}
+  }
+
+  function bootstrapFromLocal() {
+    // Try to restore from local first (fast), then if not available start fresh.
+    let restored = false;
+    try {
+      const raw = localStorage.getItem(LS_STATE);
+      if (raw) restored = applyGameState(JSON.parse(raw));
+    } catch {}
+
+    trackEvent("game_boot", { restored_local: restored });
+
+    if (!restored) {
+      generateSolvableLevel(1);
+    } else {
+      banner("Restored your last session.", "move");
+    }
+  }
+
+  // ---------- Cloud save ----------
+  function progressDocRef(uid) {
+    // Keep existing collection name for backward compatibility
+    return window.firebaseDoc(window.firebaseDb, "progress", uid);
+  }
+
+  async function saveCloudState() {
     if (!currentUser || !window.firebaseDb) return;
 
-    const progress = {
-      level: level,
-      score: score,
-      best: best,
-      soundOn: soundOn,
-      theme: theme,
-      lastSaved: new Date().toISOString()
+    const state = serializeGameState();
+    const payload = {
+      v: 1,
+      state,
+      updatedAt: window.firebaseServerTimestamp ? window.firebaseServerTimestamp() : new Date().toISOString(),
     };
 
     try {
-      await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, "progress", currentUser.uid), progress);
+      await window.firebaseSetDoc(progressDocRef(currentUser.uid), payload, { merge: true });
     } catch (error) {
-      console.error("Save error:", error);
+      console.error("Cloud save error:", error);
     }
   }
 
-  async function loadCloudProgress() {
+  async function loadCloudStateAndMaybeApply() {
     if (!currentUser || !window.firebaseDb) return false;
 
     try {
-      const docSnap = await window.firebaseGetDoc(window.firebaseDoc(window.firebaseDb, "progress", currentUser.uid));
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.level && data.level > level) {
-          setLevel(data.level);
-          setScore(data.score || 0);
-          best = Math.max(best, data.best || 0);
-          bestEl.textContent = best;
-          localStorage.setItem(LS_BEST, String(best));
+      const snap = await window.firebaseGetDoc(progressDocRef(currentUser.uid));
+      if (!snap.exists()) return false;
 
-          if (data.soundOn !== undefined) {
-            soundOn = data.soundOn;
-            localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
-            refreshSoundBtn();
-          }
+      const data = snap.data();
 
-          if (data.theme) {
-            theme = data.theme;
-            localStorage.setItem(LS_THEME, theme);
-            if (theme === "ubuntu") document.body.classList.add("ubuntu-theme");
-          }
+      // Backward compatibility: older saves stored top-level fields
+      const state = data.state || (data.level ? {
+        v: 1,
+        level: data.level,
+        score: data.score,
+        best: data.best,
+        soundOn: data.soundOn,
+        theme: data.theme,
+        movesLeft: 0,
+        goal: null,
+        size: 6,
+        gridColors: null,
+        savedAt: data.lastSaved,
+      } : null);
 
-          banner(`Loaded saved progress: Level ${data.level}`, "move");
-          generateSolvableLevel(level);
-          return true;
-        }
+      if (!state) return false;
+
+      const applied = applyGameState(state);
+      if (applied) {
+        saveLocalState(); // keep local in sync
+        trackEvent("cloud_restore", { ok: true });
+        return true;
       }
     } catch (error) {
-      console.error("Load error:", error);
+      console.error("Cloud load error:", error);
+      trackEvent("cloud_restore", { ok: false });
     }
     return false;
   }
-  const LS_BEST = "onemoveleft:best";
-  const LS_SOUND = "onemoveleft:soundOn";
-  const LS_THEME = "onemoveleft:theme";
 
-  let best = parseInt(localStorage.getItem(LS_BEST) || "0", 10);
-  bestEl.textContent = best;
-
-  let soundOn = (localStorage.getItem(LS_SOUND) ?? "1") === "1";
-  refreshSoundBtn();
-
-  let theme = localStorage.getItem(LS_THEME) || "default";
-  if (theme === "ubuntu") document.body.classList.add("ubuntu-theme");
-
-  // ===== Game state save/load =====
+  // Save state:
+  // - always to local (so refresh works)
+  // - to cloud only when signed in
   function saveGameState() {
-    // Only save to cloud if signed in
-    if (currentUser) {
-      saveCloudProgress();
-    }
+    saveLocalState();
+    if (currentUser) saveCloudState();
   }
-
-  function loadGameState() {
-    // Only load from cloud if signed in
-    if (currentUser) {
-      return loadCloudProgress();
-    }
-    return false;
-  }
-
-  async function startGame() {
-    trackEvent('game_start', {
-      user_agent: navigator.userAgent,
-      referrer: document.referrer
-    });
-    const loaded = await loadCloudProgress();
-    if (!loaded) {
-      generateSolvableLevel(1);
-    }
-  }
-
-  // ===== Audio (no asset files) =====
+// ===== Audio (no asset files) =====
   let ac = null;
   let unlocked = false;
 
@@ -252,15 +393,15 @@
 
   // ===== Analytics =====
 function trackEvent(eventName, parameters = {}) {
-  if (window.firebaseAnalytics && typeof window.firebaseAnalytics !== 'undefined') {
-    // Firebase Analytics event tracking
-    try {
-      // For now, we'll use console.log for development
-      // In production, you'd use Firebase Analytics gtag or measurement protocol
-      console.log('Analytics Event:', eventName, parameters);
-    } catch (error) {
-      console.error('Analytics error:', error);
+  try {
+    if (window.firebaseAnalytics && window.firebaseLogEvent) {
+      window.firebaseLogEvent(window.firebaseAnalytics, eventName, parameters);
+    } else {
+      // keep dev noise low
+      // console.log("Analytics:", eventName, parameters);
     }
+  } catch (e) {
+    // never break gameplay for analytics
   }
 }
   const SYMBOLS = ["◆", "✦", "▲", "●", "✖"];
@@ -347,25 +488,6 @@ function trackEvent(eventName, parameters = {}) {
     `;
     overlayPrimary.textContent = "Please wait";
     overlay.classList.add("show");
-  }
-
-  function showSignInOverlay() {
-    overlayTitle.textContent = "Sign In Required";
-    overlayBody.innerHTML = `
-      <div style="text-align:center; color: rgba(255,255,255,.70)">
-        Sign in with Google to save your progress and play One Move Left.
-      </div>
-      <button class="btn primary" id="signInOverlayBtn" style="margin-top: 20px;">Sign In with Google</button>
-    `;
-    overlayPrimary.style.display = 'none';
-    closeOverlay.style.display = 'none';
-    overlay.classList.add("show");
-
-    // Add event listener for the sign-in button
-    const signInBtn = qs("#signInOverlayBtn");
-    signInBtn.addEventListener("click", () => {
-      signInWithGoogle();
-    });
   }
 
   // ===== Layout: dynamic board size =====
@@ -664,6 +786,8 @@ function trackEvent(eventName, parameters = {}) {
     } else {
       banner("No pops. Next move.", "move");
     }
+
+    saveGameState();
 
     if (goalSatisfiedDOM()) return onWin();
     if (movesLeft <= 0) return onLose();
@@ -1076,6 +1200,7 @@ function trackEvent(eventName, parameters = {}) {
           solutionMoves = solution;
 
           banner(`Level ${lv} ready. ${moves} moves.`, "move");
+          saveGameState();
           return;
         }
       }
@@ -1100,6 +1225,7 @@ function trackEvent(eventName, parameters = {}) {
     setGoal({ type:"popTotal", target: 10, remaining: 10 });
     solutionMoves = null;
     banner("Fallback level (could be easier).", "move");
+    saveGameState();
   }
 
   function newRandomBoardDOM(fill) {
@@ -1296,6 +1422,14 @@ function trackEvent(eventName, parameters = {}) {
     closeOverlay.style.display = '';
     overlayPrimary.style.display = 'none';
     overlay.classList.add("show");
+
+    const signOutBtn = qs("#signOutBtn");
+    if (signOutBtn) {
+      signOutBtn.addEventListener("click", () => {
+        signOutUser();
+        overlay.classList.remove("show");
+      });
+    }
   });
 
   hintBtn.addEventListener("click", () => {
@@ -1330,9 +1464,26 @@ function trackEvent(eventName, parameters = {}) {
     }
   });
 
-  closeOverlay.addEventListener("click", () => overlay.classList.remove("show"));
+  closeOverlay.addEventListener("click", () => {
+    if (overlayMode === "confirm") {
+      overlay.classList.remove("show");
+      const cb = overlaySecondaryCb;
+      overlayMode = null; overlayPrimaryCb = null; overlaySecondaryCb = null;
+      cb?.();
+      return;
+    }
+    overlay.classList.remove("show");
+  });
 
   overlayPrimary.addEventListener("click", () => {
+    if (overlayMode === "confirm") {
+      overlay.classList.remove("show");
+      const cb = overlayPrimaryCb;
+      overlayMode = null; overlayPrimaryCb = null; overlaySecondaryCb = null;
+      cb?.();
+      return;
+    }
+
     overlay.classList.remove("show");
     if (!goal) return;
 
@@ -1419,4 +1570,10 @@ function trackEvent(eventName, parameters = {}) {
   }
 
   initFirebase();
+
+  // Bootstrap from local state immediately, regardless of Firebase load status
+  if (!hasBootstrapped) {
+    hasBootstrapped = true;
+    bootstrapFromLocal();
+  }
 })();
