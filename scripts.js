@@ -28,6 +28,10 @@
   let soundOn = (localStorage.getItem(LS_SOUND) ?? "1") === "1";
   let theme = localStorage.getItem(LS_THEME) || "default";
 
+  // Initialize UI
+  bestEl.textContent = best;
+  if (theme === "ubuntu") document.body.classList.add("ubuntu-theme");
+
   // ===== Firebase Auth, Persistence & Cloud Save =====
   let currentUser = null;
   let hasBootstrapped = false;
@@ -37,6 +41,29 @@
 
   // Local (offline) save so the game survives refresh even without login
   const LS_STATE = "onemoveleft:state:v1";
+
+  function getUserData() {
+    if (currentUser) return currentUser;
+    const stored = localStorage.getItem(LS_USER);
+    return stored ? JSON.parse(stored) : null;
+  }
+
+  function updateProfileDisplay() {
+    const user = getUserData();
+    if (user) {
+      const displayName = user.displayName || user.email || 'User';
+      const photoURL = user.photoURL;
+      if (photoURL) {
+        profileDisplay.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">${displayName}`;
+      } else {
+        profileDisplay.textContent = `👤 ${displayName}`;
+      }
+      profileDisplay.title = `Signed in as ${displayName} - progress auto-saved`;
+    } else {
+      profileDisplay.innerHTML = '';
+      profileDisplay.title = '';
+    }
+  }
 
   function hideOverlay() {
     overlay.classList.remove("show");
@@ -74,9 +101,10 @@
         <div>
     `;
 
-    if (currentUser) {
-      const displayName = currentUser.displayName || currentUser.email || "User";
-      const photoURL = currentUser.photoURL;
+    const user = getUserData();
+    if (user) {
+      const displayName = user.displayName || user.email || "User";
+      const photoURL = user.photoURL;
       body += `
         <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 16px;">
           <div style="display: flex; align-items: center; margin-bottom: 8px;">
@@ -126,7 +154,7 @@
       banner(`Theme: ${theme}`, "move");
     });
 
-    if (currentUser) {
+    if (user) {
       const signOutBtn = qs("#signOutBtn");
       signOutBtn.addEventListener("click", () => {
         signOutUser();
@@ -146,6 +174,7 @@
     // Firebase auth persistence is set in index.html (browserLocalPersistence).
     window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
       currentUser = user || null;
+      updateProfileDisplay();
 
       // Update settings modal if open
       if (overlay.classList.contains("show") && overlayTitle.textContent === "Settings") {
@@ -174,6 +203,14 @@
       const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseProvider);
       trackEvent("login", { method: "google" });
 
+      // Store user data in localStorage
+      localStorage.setItem(LS_USER, JSON.stringify({
+        displayName: result.user.displayName,
+        email: result.user.email,
+        photoURL: result.user.photoURL,
+        uid: result.user.uid
+      }));
+
       // After sign-in, immediately try to load cloud state.
       // If cloud doesn't exist, we keep local and start saving going forward.
       const loaded = await loadCloudStateAndMaybeApply();
@@ -192,6 +229,7 @@
     try {
       await window.firebaseSignOut(window.firebaseAuth);
       currentUser = null;
+      localStorage.removeItem(LS_USER);
       updateProfileDisplay();
       banner("Signed out. Playing offline.", "move");
       trackEvent("logout");
@@ -1414,6 +1452,103 @@ function trackEvent(eventName, parameters = {}) {
   }
 
   // ===== Buttons & overlay actions =====
+  function showSettingsOverlay() {
+    overlayTitle.textContent = "Settings";
+    overlayBody.innerHTML = `
+      <div class="settings-grid">
+        <button class="btn" id="soundBtnModal">🔊 Sound</button>
+        <button class="btn" id="themeBtnModal">🎨 Theme</button>
+        <div id="profileDisplayModal"></div>
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="btn" id="closeSettingsBtn">Close</button>
+      </div>
+    `;
+    closeOverlay.style.display = 'none';
+    overlayPrimary.style.display = 'none';
+    overlay.classList.add("show");
+
+    // Update modal buttons
+    updateSoundBtnModal();
+    updateThemeBtnModal();
+    updateProfileDisplayModal();
+
+    // Close button
+    const closeBtn = qs("#closeSettingsBtn");
+    closeBtn.addEventListener("click", () => {
+      overlay.classList.remove("show");
+    });
+  }
+
+  function updateSoundBtnModal() {
+    const btn = qs("#soundBtnModal");
+    if (!btn) return;
+    btn.textContent = soundOn ? "🔊 Sound On" : "🔇 Sound Off";
+    btn.setAttribute("aria-pressed", String(soundOn));
+    btn.addEventListener("click", () => {
+      soundOn = !soundOn;
+      localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
+      updateSoundBtnModal();
+      trackEvent('sound_toggle', { sound_enabled: soundOn });
+      if (soundOn) { initAudio(); goodSound(); }
+    });
+  }
+
+  function updateThemeBtnModal() {
+    const btn = qs("#themeBtnModal");
+    if (!btn) return;
+    btn.textContent = theme === "ubuntu" ? "🎨 Ubuntu Theme" : "🎨 Default Theme";
+    btn.addEventListener("click", () => {
+      theme = theme === "ubuntu" ? "default" : "ubuntu";
+      localStorage.setItem(LS_THEME, theme);
+      document.body.classList.toggle("ubuntu-theme", theme === "ubuntu");
+      updateThemeBtnModal();
+      trackEvent('theme_toggle', { theme: theme });
+    });
+  }
+
+  function updateProfileDisplayModal() {
+    const display = qs("#profileDisplayModal");
+    if (!display) return;
+
+    let user = currentUser;
+    if (!user) {
+      // Fallback to local storage
+      try {
+        const key = "firebase:authUser:AIzaSyDCnS3kCen2frvfnmi2v4yBwJXmb2853s0:[DEFAULT]";
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          user = JSON.parse(stored);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (user) {
+      const displayName = user.displayName || user.email || 'User';
+      const photoURL = user.photoURL;
+      if (photoURL) {
+        display.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">${displayName}`;
+      } else {
+        display.textContent = `👤 ${displayName}`;
+      }
+      display.style.cursor = "pointer";
+      display.addEventListener("click", () => {
+        if (confirm("Sign out?")) {
+          signOutUser();
+          overlay.classList.remove("show");
+        }
+      });
+    } else {
+      display.innerHTML = '<button class="btn" id="signInBtnModal">Sign In with Google</button>';
+      const signInBtn = qs("#signInBtnModal");
+      signInBtn.addEventListener("click", () => {
+        signInWithGoogle();
+      });
+    }
+  }
+
   nextBtn.addEventListener("click", () => {
     generateSolvableLevel(level);
   });
