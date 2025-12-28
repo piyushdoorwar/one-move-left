@@ -70,6 +70,9 @@
   }
 
   function initFirebase() {
+    // Always update profile display initially (assume not signed in)
+    updateProfileDisplay(null);
+
     if (!window.firebaseAuth) return; // Firebase not loaded / blocked
 
     // Firebase auth persistence is set in index.html (browserLocalPersistence).
