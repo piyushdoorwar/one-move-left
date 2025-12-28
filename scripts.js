@@ -74,6 +74,10 @@
     try {
       const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseProvider);
       banner(`Welcome, ${result.user.displayName || 'User'}! Progress will be saved.`, "move");
+      trackEvent('login', {
+        method: 'google',
+        user_id: result.user.uid
+      });
     } catch (error) {
       console.error("Sign-in error:", error);
       banner("Sign-in failed", "move");
@@ -248,7 +252,19 @@
     }, 1400);
   }
 
-  // ===== Symbols per color =====
+  // ===== Analytics =====
+function trackEvent(eventName, parameters = {}) {
+  if (window.firebaseAnalytics && typeof window.firebaseAnalytics !== 'undefined') {
+    // Firebase Analytics event tracking
+    try {
+      // For now, we'll use console.log for development
+      // In production, you'd use Firebase Analytics gtag or measurement protocol
+      console.log('Analytics Event:', eventName, parameters);
+    } catch (error) {
+      console.error('Analytics error:', error);
+    }
+  }
+}
   const SYMBOLS = ["◆", "✦", "▲", "●", "✖"];
   const COLOR_NAMES = ["Cyan","Purple","Green","Yellow","Red"];
 
@@ -1142,6 +1158,12 @@
   function onWin() {
     goodSound();
     banner("Mission cleared!", "move");
+    trackEvent('level_completed', {
+      level: level,
+      score: score,
+      moves_used: movesLeft
+    });
+
     overlayTitle.textContent = "Level Complete";
     overlayBody.innerHTML = `
       You cleared the mission.<br><br>
@@ -1271,6 +1293,10 @@
 
   hintBtn.addEventListener("click", () => {
     if (!goal) return;
+    trackEvent('hint_used', {
+      level: level,
+      goal_type: goal.type
+    });
     overlayTitle.textContent = "Hint";
     let body = `
       <b>Goal:</b> ${goalToText(goal)}<br>
@@ -1385,6 +1411,10 @@
 
   // ===== Start =====
   initFirebase();
+  trackEvent('game_start', {
+    user_agent: navigator.userAgent,
+    referrer: document.referrer
+  });
   if (!loadGameState()) {
     // No saved state, start fresh
     generateSolvableLevel(1);
