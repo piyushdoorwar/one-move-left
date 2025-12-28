@@ -101,6 +101,62 @@ This game is now a Progressive Web App with the following features:
 2. Open `index.html` in a web browser
 3. Start playing!
 
+## Cloud Save Setup (Optional)
+
+The game supports Google sign-in for cloud saving of progress across devices. To enable this feature:
+
+1. Create a Firebase project at https://console.firebase.google.com/
+2. Enable Google Authentication in Authentication > Sign-in method
+3. Enable Firestore Database in Firestore Database
+4. Get your Firebase config from Project settings > General > Your apps
+5. Replace the placeholder config in `index.html` with your actual Firebase config:
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "YOUR_API_KEY",
+     authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+     projectId: "YOUR_PROJECT_ID",
+     storageBucket: "YOUR_PROJECT_ID.appspot.com",
+     messagingSenderId: "YOUR_SENDER_ID",
+     appId: "YOUR_APP_ID"
+   };
+   ```
+6. Set up Firestore security rules to allow authenticated users to read/write their own progress:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /progress/{userId} {
+         allow read, write: if request.auth != null && request.auth.uid == userId;
+       }
+     }
+   }
+   ```
+
+Once configured, users can sign in with Google to sync their progress across devices.
+
+## Deployment
+
+The game is configured for Firebase Hosting with automatic deployment via GitHub Actions.
+
+### Firebase Hosting Setup
+
+1. Install Firebase CLI: `npm install -g firebase-tools`
+2. Login to Firebase: `firebase login`
+3. Initialize hosting: `firebase init hosting` (select your project)
+4. The `firebase.json` and `.firebaserc` files are already configured
+5. For GitHub Actions deployment, add `FIREBASE_TOKEN` secret:
+   - Generate token: `firebase login:ci`
+   - Add to GitHub repository secrets as `FIREBASE_TOKEN`
+
+### Manual Deployment
+
+To deploy manually:
+```bash
+firebase deploy --only hosting --project one-move-left
+```
+
+The site will be available at: `https://one-move-left.web.app`
+
 ## Technical Details
 - Built with vanilla JavaScript, HTML, and CSS
 - No external frameworks or libraries required

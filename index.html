@@ -14,6 +14,40 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDCnS3kCen2frvfnmi2v4yBwJXmb2853s0",
+      authDomain: "one-move-left.firebaseapp.com",
+      projectId: "one-move-left",
+      storageBucket: "one-move-left.firebasestorage.app",
+      messagingSenderId: "14531706738",
+      appId: "1:14531706738:web:7a2ea894d0ecd9c63d67eb",
+      measurementId: "G-52NBE5ELJJ"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+    window.firebaseProvider = provider;
+    window.firebaseSignInWithPopup = signInWithPopup;
+    window.firebaseSignOut = signOut;
+    window.firebaseOnAuthStateChanged = onAuthStateChanged;
+    window.firebaseDoc = doc;
+    window.firebaseGetDoc = getDoc;
+    window.firebaseSetDoc = setDoc;
+  </script>
 </head>
 <body>
   <div class="app">
@@ -36,6 +70,7 @@
       <button class="btn ghost" id="howBtn">❓ How</button>
       <button class="btn ghost" id="hintBtn">💡 Hint</button>
       <button class="btn ghost" id="themeBtn">🎨 Theme</button>
+      <button class="btn ghost" id="signinBtn">👤 Sign In</button>
     </div>
 
     <div class="bannerSlot">

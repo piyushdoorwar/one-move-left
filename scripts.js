@@ -23,9 +23,113 @@
   const overlayTitle = qs("#overlayTitle");
   const overlayBody = qs("#overlayBody");
   const closeOverlay = qs("#closeOverlay");
-  const overlayPrimary = qs("#overlayPrimary");
+  const signinBtn = qs("#signinBtn");
 
-  // ===== Persistence =====
+  // ===== Firebase Auth & Cloud Save =====
+  let currentUser = null;
+
+  function initFirebase() {
+    if (!window.firebaseAuth) return; // Firebase not loaded
+
+    window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+      currentUser = user;
+      updateSignInButton();
+      if (user) {
+        loadCloudProgress();
+      }
+    });
+  }
+
+  function updateSignInButton() {
+    if (currentUser) {
+      signinBtn.textContent = `👤 ${currentUser.displayName || 'User'}`;
+      signinBtn.setAttribute("aria-pressed", "true");
+    } else {
+      signinBtn.textContent = "👤 Sign In";
+      signinBtn.setAttribute("aria-pressed", "false");
+    }
+  }
+
+  async function signInWithGoogle() {
+    if (!window.firebaseAuth) {
+      banner("Firebase not configured", "move");
+      return;
+    }
+
+    try {
+      const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseProvider);
+      banner(`Welcome, ${result.user.displayName}!`, "move");
+    } catch (error) {
+      console.error("Sign-in error:", error);
+      banner("Sign-in failed", "move");
+    }
+  }
+
+  async function signOutUser() {
+    if (!window.firebaseAuth) return;
+
+    try {
+      await window.firebaseSignOut(window.firebaseAuth);
+      banner("Signed out", "move");
+    } catch (error) {
+      console.error("Sign-out error:", error);
+    }
+  }
+
+  async function saveCloudProgress() {
+    if (!currentUser || !window.firebaseDb) return;
+
+    const progress = {
+      level: level,
+      score: score,
+      best: best,
+      soundOn: soundOn,
+      theme: theme,
+      lastSaved: new Date().toISOString()
+    };
+
+    try {
+      await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, "progress", currentUser.uid), progress);
+    } catch (error) {
+      console.error("Save error:", error);
+    }
+  }
+
+  async function loadCloudProgress() {
+    if (!currentUser || !window.firebaseDb) return;
+
+    try {
+      const docSnap = await window.firebaseGetDoc(window.firebaseDoc(window.firebaseDb, "progress", currentUser.uid));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.level && data.level > level) {
+          setLevel(data.level);
+          setScore(data.score || 0);
+          best = Math.max(best, data.best || 0);
+          bestEl.textContent = best;
+          localStorage.setItem(LS_BEST, String(best));
+
+          if (data.soundOn !== undefined) {
+            soundOn = data.soundOn;
+            localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
+            refreshSoundBtn();
+          }
+
+          if (data.theme) {
+            theme = data.theme;
+            localStorage.setItem(LS_THEME, theme);
+            if (theme === "ubuntu") document.body.classList.add("ubuntu-theme");
+          }
+
+          banner(`Loaded progress: Level ${data.level}`, "move");
+          generateSolvableLevel(level);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Load error:", error);
+    }
+  }
   const LS_BEST = "onemoveleft:best";
   const LS_SOUND = "onemoveleft:soundOn";
   const LS_THEME = "onemoveleft:theme";
@@ -45,6 +149,11 @@
   function saveGameState() {
     localStorage.setItem(LS_LEVEL, String(level));
     localStorage.setItem(LS_SCORE, String(score));
+
+    // Also save to cloud if signed in
+    if (currentUser) {
+      saveCloudProgress();
+    }
   }
 
   function loadGameState() {
@@ -1108,11 +1217,12 @@
     else banner("Muted", "move");
   });
 
-  themeBtn.addEventListener("click", () => {
-    theme = theme === "default" ? "ubuntu" : "default";
-    localStorage.setItem(LS_THEME, theme);
-    document.body.classList.toggle("ubuntu-theme");
-    banner(theme === "ubuntu" ? "Ubuntu theme" : "Default theme", "move");
+  signinBtn.addEventListener("click", () => {
+    if (currentUser) {
+      signOutUser();
+    } else {
+      signInWithGoogle();
+    }
   });
 
   howBtn.addEventListener("click", () => {
@@ -1238,6 +1348,7 @@
   }
 
   // ===== Start =====
+  initFirebase();
   if (!loadGameState()) {
     // No saved state, start fresh
     generateSolvableLevel(1);
