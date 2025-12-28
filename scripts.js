@@ -136,7 +136,6 @@
       const signInBtn = qs("#signInBtn");
       signInBtn.addEventListener("click", () => {
         signInWithGoogle();
-        overlay.classList.remove("show");
       });
     }
   }
@@ -147,6 +146,11 @@
     // Firebase auth persistence is set in index.html (browserLocalPersistence).
     window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
       currentUser = user || null;
+
+      // Update settings modal if open
+      if (overlay.classList.contains("show") && overlayTitle.textContent === "Settings") {
+        showSettingsOverlay();
+      }
 
       if (currentUser) {
         // Auto-restore from cloud if there is a save. If not, keep local.
