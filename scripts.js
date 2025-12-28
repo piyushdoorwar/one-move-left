@@ -29,6 +29,8 @@
   const LS_BEST = "onemoveleft:best";
   const LS_SOUND = "onemoveleft:soundOn";
   const LS_THEME = "onemoveleft:theme";
+  const LS_LEVEL = "onemoveleft:level";
+  const LS_SCORE = "onemoveleft:score";
 
   let best = parseInt(localStorage.getItem(LS_BEST) || "0", 10);
   bestEl.textContent = best;
@@ -38,6 +40,31 @@
 
   let theme = localStorage.getItem(LS_THEME) || "default";
   if (theme === "ubuntu") document.body.classList.add("ubuntu-theme");
+
+  // ===== Game state save/load =====
+  function saveGameState() {
+    localStorage.setItem(LS_LEVEL, String(level));
+    localStorage.setItem(LS_SCORE, String(score));
+  }
+
+  function loadGameState() {
+    const savedLevel = parseInt(localStorage.getItem(LS_LEVEL) || "1", 10);
+    const savedScore = parseInt(localStorage.getItem(LS_SCORE) || "0", 10);
+
+    if (savedLevel > 1 || savedScore > 0) {
+      // Load saved progress
+      setLevel(savedLevel);
+      setScore(savedScore);
+      generateSolvableLevel(savedLevel);
+      return true;
+    }
+    return false;
+  }
+
+  function clearGameState() {
+    localStorage.removeItem(LS_LEVEL);
+    localStorage.removeItem(LS_SCORE);
+  }
 
   // ===== Audio (no asset files) =====
   let ac = null;
@@ -955,7 +982,8 @@
 
     setMoves(currentLevelMoves);
     setGoal(deepCloneGoal(currentLevelGoal));
-    setScore(0);
+    // Keep current score instead of resetting to 0
+    // setScore(0);
 
     banner(`Retrying level ${level}. ${currentLevelMoves} moves left.`, "move");
   }
@@ -1012,15 +1040,15 @@
         clearInterval(timer);
         overlay.classList.remove("show");
         setLevel(level + 1);
+        saveGameState(); // Save progress after advancing level
+        // clear stored level for next new level
+        currentLevelGrid = null;
+        currentLevelGoal = null;
+        currentLevelMoves = 0;
+        solutionMoves = null;
         generateSolvableLevel(level);
       }
     }, 1000);
-
-    // clear stored level for next new level
-    currentLevelGrid = null;
-    currentLevelGoal = null;
-    currentLevelMoves = 0;
-    solutionMoves = null;
   }
 
   function onLose() {
@@ -1057,7 +1085,13 @@
   }
 
   // ===== Buttons & overlay actions =====
-  nextBtn.addEventListener("click", () => generateSolvableLevel(level));
+  nextBtn.addEventListener("click", () => {
+    if (level === 1 && score === 0) {
+      // Starting fresh - clear any saved state
+      clearGameState();
+    }
+    generateSolvableLevel(level);
+  });
   retryBtn.addEventListener("click", () => {
     if (currentLevelGrid && currentLevelGoal && currentLevelMoves > 0) {
       loadStoredLevel();
@@ -1204,5 +1238,8 @@
   }
 
   // ===== Start =====
-  generateSolvableLevel(1);
+  if (!loadGameState()) {
+    // No saved state, start fresh
+    generateSolvableLevel(1);
+  }
 })();
