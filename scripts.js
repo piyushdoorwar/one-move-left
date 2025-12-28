@@ -29,6 +29,10 @@
   // ===== Firebase Auth & Cloud Save =====
   let currentUser = null;
 
+  function hideOverlay() {
+    overlay.classList.remove("show");
+  }
+
   function initFirebase() {
     if (!window.firebaseAuth) return; // Firebase not loaded
 
@@ -1353,6 +1357,7 @@ function trackEvent(eventName, parameters = {}) {
   // Touch input
   boardEl.addEventListener("touchstart", (e) => {
     initAudio();
+    if (!e.changedTouches || e.changedTouches.length === 0) return;
     touching = true;
     const t = e.changedTouches[0];
     startX=t.clientX; startY=t.clientY;
@@ -1360,6 +1365,7 @@ function trackEvent(eventName, parameters = {}) {
 
   boardEl.addEventListener("touchend", (e) => {
     if (!touching) return;
+    if (!e.changedTouches || e.changedTouches.length === 0) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
