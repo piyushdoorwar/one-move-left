@@ -23,6 +23,7 @@
   const overlayTitle = qs("#overlayTitle");
   const overlayBody = qs("#overlayBody");
   const closeOverlay = qs("#closeOverlay");
+  const overlayPrimary = qs("#overlayPrimary");
   const signinBtn = qs("#signinBtn");
 
   // ===== Firebase Auth & Cloud Save =====
