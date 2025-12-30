@@ -91,15 +91,15 @@
   function showSettingsOverlay() {
     overlayTitle.textContent = "Settings";
     let body = `
-      <div style="display: flex; flex-direction: column; gap: 20px;">
-        <div>
+      <div style="display: flex; flex-direction: column; gap: 24px; padding: 20px;">
+        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px;">
           <h4 style="margin: 0 0 12px 0; color: var(--text); font-size: 16px;">Game Settings</h4>
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-            <button class="btn" id="soundToggleBtn">${soundOn ? "🔊 Sound On" : "🔇 Sound Off"}</button>
-            <button class="btn" id="themeToggleBtn">${theme === "ubuntu" ? "🎨 Ubuntu Theme" : "🎨 Default Theme"}</button>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="btn" id="soundToggleBtn" style="box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${soundOn ? "🔊 Sound On" : "🔇 Sound Off"}</button>
+            <button class="btn" id="themeToggleBtn" style="box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${theme === "ubuntu" ? "🎨 Ubuntu Theme" : "🎨 Default Theme"}</button>
           </div>
         </div>
-        <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 16px;">
+        <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">
           <h4 style="margin: 0 0 12px 0; color: var(--text); font-size: 16px;">Account</h4>
     `;
 
@@ -108,26 +108,23 @@
       const displayName = user.displayName || user.email || "User";
       const photoURL = user.photoURL;
       body += `
-        <div style="display: flex; align-items: center; margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+        <div style="display: flex; align-items: center; margin-bottom: 16px; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           ${photoURL ? `<img src="${photoURL}" alt="${displayName}" style="width:40px;height:40px;border-radius:50%;margin-right:12px;">` : '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--secondary));display:flex;align-items:center;justify-content:center;margin-right:12px;font-size:18px;">👤</div>'}
           <div>
             <div style="font-weight: bold; margin-bottom: 2px;">${escapeHtml(displayName)}</div>
             <small style="color: rgba(255,255,255,.7)">Progress auto-saves to cloud</small>
           </div>
         </div>
-        <button class="btn" id="signOutBtn">Sign Out</button>
+        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.2); margin: 16px 0;">
+        <button class="btn" id="signOutBtn" style="box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Sign Out</button>
       `;
     } else {
       body += `
-        <div style="text-align: center;">
+        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.2); margin: 16px 0;">
+        <div style="text-align: center; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px;">
           <p style="margin: 0 0 16px 0; color: rgba(255,255,255,.8); font-size: 14px;">Sign in to save your progress across devices</p>
-          <button class="btn primary" id="signInBtn" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink: 0;">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
+          <button class="btn primary" id="signInBtn" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border-radius: 8px;">
+            <span style="font-size: 20px; font-weight: bold; color: #4285F4;">G</span>
             Sign In with Google
           </button>
         </div>
