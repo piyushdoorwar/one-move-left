@@ -95,7 +95,7 @@
       <div style="display: flex; flex-direction: column; gap: 24px; padding: 20px;">
         <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px;">
           <h4 style="margin: 0 0 12px 0; color: var(--text); font-size: 16px;">Game Settings</h4>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 16px;">
             <button class="btn" id="soundToggleBtn" style="box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${soundOn ? "🔊 Sound On" : "🔇 Sound Off"}</button>
             <button class="btn" id="themeToggleBtn" style="box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${theme === "ubuntu" ? "🎨 Ubuntu Theme" : "🎨 Default Theme"}</button>
           </div>
