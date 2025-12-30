@@ -22,6 +22,7 @@
   const LS_BEST = "onemoveleft:best";
   const LS_SOUND = "onemoveleft:soundOn";
   const LS_THEME = "onemoveleft:theme";
+  const LS_USER = "onemoveleft:user";
 
   // ===== Variables =====
   let best = parseInt(localStorage.getItem(LS_BEST) || "0", 10);
@@ -1624,6 +1625,10 @@ function trackEvent(eventName, parameters = {}) {
       <b>Remaining:</b> ${goalRemainingText(goal)}<br>
       <b>Moves left:</b> ${movesLeft}<br><br>
     `;
+    // Compute solution if not available
+    if (!solutionMoves && currentLevelGrid && currentLevelGoal && currentLevelMoves > 0) {
+      solutionMoves = isSolvable(currentLevelGrid, currentLevelGoal, currentLevelMoves);
+    }
     if (solutionMoves && solutionMoves.length > 0) {
       body += `<b>Solution moves:</b><br>${solutionMoves.map((m, i) => `${i+1}. ${m}`).join('<br>')}<br><br>`;
     }
