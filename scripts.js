@@ -22,7 +22,6 @@
   const LS_BEST = "onemoveleft:best";
   const LS_SOUND = "onemoveleft:soundOn";
   const LS_THEME = "onemoveleft:theme";
-  const LS_USER = "onemoveleft:user";
 
   // ===== Variables =====
   let best = parseInt(localStorage.getItem(LS_BEST) || "0", 10);
@@ -33,38 +32,14 @@
   bestEl.textContent = best;
   if (theme === "ubuntu") document.body.classList.add("ubuntu-theme");
 
-  // ===== Firebase Auth, Persistence & Cloud Save =====
-  let currentUser = null;
-  let hasBootstrapped = false;
+  // Local (offline) save so the game survives refresh
+  const LS_STATE = "onemoveleft:state:v1";
+
+  // Variables for overlay management
   let overlayMode = null; // 'confirm' when used for auth prompts
   let overlayPrimaryCb = null;
   let overlaySecondaryCb = null;
-
-  // Local (offline) save so the game survives refresh even without login
-  const LS_STATE = "onemoveleft:state:v1";
-
-  function getUserData() {
-    if (currentUser) return currentUser;
-    const stored = localStorage.getItem(LS_USER);
-    return stored ? JSON.parse(stored) : null;
-  }
-
-  function updateProfileDisplay() {
-    const user = getUserData();
-    if (user) {
-      const displayName = user.displayName || user.email || 'User';
-      const photoURL = user.photoURL;
-      if (photoURL) {
-        profileDisplay.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">${displayName}`;
-      } else {
-        profileDisplay.textContent = `👤 ${displayName}`;
-      }
-      profileDisplay.title = `Signed in as ${displayName} - progress auto-saved`;
-    } else {
-      profileDisplay.innerHTML = '';
-      profileDisplay.title = '';
-    }
-  }
+  let hasBootstrapped = false;
 
   function hideOverlay() {
     overlay.classList.remove("show");
@@ -87,164 +62,6 @@
 
     closeOverlay.textContent = secondaryText || "Close";
     closeOverlay.style.display = "inline-block";
-  }
-
-  function showSettingsOverlay() {
-    overlayTitle.textContent = "Settings";
-    let body = `
-      <div style="display: flex; flex-direction: column; gap: 24px; padding: 20px;">
-        <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px;">
-          <h4 style="margin: 0 0 12px 0; color: var(--text); font-size: 16px;">Game Settings</h4>
-          <div style="display: flex; flex-direction: column; gap: 16px;">
-            <button class="btn" id="soundToggleBtn" style="box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${soundOn ? "🔊 Sound On" : "🔇 Sound Off"}</button>
-            <button class="btn" id="themeToggleBtn" style="box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${theme === "ubuntu" ? "🎨 Ubuntu Theme" : "🎨 Default Theme"}</button>
-          </div>
-        </div>
-        <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">
-          <h4 style="margin: 0 0 12px 0; color: var(--text); font-size: 16px;">Account</h4>
-    `;
-
-    const user = getUserData();
-    if (user) {
-      const displayName = user.displayName || user.email || "User";
-      const photoURL = user.photoURL;
-      body += `
-        <div style="display: flex; align-items: center; margin-bottom: 16px; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          ${photoURL ? `<img src="${photoURL}" alt="${displayName}" style="width:40px;height:40px;border-radius:50%;margin-right:12px;">` : '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--secondary));display:flex;align-items:center;justify-content:center;margin-right:12px;font-size:18px;">👤</div>'}
-          <div>
-            <div style="font-weight: bold; margin-bottom: 2px;">${escapeHtml(displayName)}</div>
-            <small style="color: rgba(255,255,255,.7)">Progress auto-saves to cloud</small>
-          </div>
-        </div>
-        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.2); margin: 16px 0;">
-        <button class="btn" id="signOutBtn" style="box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Sign Out</button>
-      `;
-    } else {
-      body += `
-        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.2); margin: 16px 0;">
-        <div style="text-align: center; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px;">
-          <p style="margin: 0 0 16px 0; color: rgba(255,255,255,.8); font-size: 14px;">Sign in to save your progress across devices</p>
-          <button class="btn primary" id="signInBtn" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border-radius: 8px;">
-            <span style="font-size: 20px; font-weight: bold; color: #4285F4;">G</span>
-            Sign In with Google
-          </button>
-        </div>
-      `;
-    }
-
-    body += `
-        </div>
-      </div>
-    `;
-
-    overlayBody.innerHTML = body;
-    closeOverlay.style.display = '';
-    overlayPrimary.style.display = 'none';
-    overlay.classList.add("show");
-
-    // Event listeners
-    const soundToggleBtn = qs("#soundToggleBtn");
-    soundToggleBtn.addEventListener("click", () => {
-      soundOn = !soundOn;
-      localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
-      soundToggleBtn.textContent = soundOn ? "🔊 Sound On" : "🔇 Sound Off";
-      trackEvent('sound_toggle', { sound_enabled: soundOn });
-      if (soundOn) { initAudio(); goodSound(); banner("Sound on", "move"); }
-      else banner("Muted", "move");
-    });
-
-    const themeToggleBtn = qs("#themeToggleBtn");
-    themeToggleBtn.addEventListener("click", () => {
-      theme = theme === "default" ? "ubuntu" : "default";
-      localStorage.setItem(LS_THEME, theme);
-      document.body.classList.toggle("ubuntu-theme", theme === "ubuntu");
-      themeToggleBtn.textContent = theme === "ubuntu" ? "🎨 Ubuntu Theme" : "🎨 Default Theme";
-      trackEvent('theme_toggle', { theme });
-      banner(`Theme: ${theme}`, "move");
-    });
-
-    if (user) {
-      const signOutBtn = qs("#signOutBtn");
-      signOutBtn.addEventListener("click", () => {
-        signOutUser();
-        overlay.classList.remove("show");
-      });
-    } else {
-      const signInBtn = qs("#signInBtn");
-      signInBtn.addEventListener("click", () => {
-        signInWithGoogle();
-      });
-    }
-  }
-
-  function initFirebase() {
-    if (!window.firebaseAuth) return; // Firebase not loaded / blocked
-
-    // Firebase auth persistence is set in index.html (browserLocalPersistence).
-    window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
-      currentUser = user || null;
-      updateProfileDisplay();
-
-      // Update settings modal if open
-      if (overlay.classList.contains("show") && overlayTitle.textContent === "Settings") {
-        showSettingsOverlay();
-      }
-
-      if (currentUser) {
-        // Auto-restore from cloud if there is a save. If not, keep local.
-        const loaded = await loadCloudStateAndMaybeApply();
-        if (loaded) banner("Cloud progress synced.", "move");
-      }
-    });
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-  }
-
-  async function signInWithGoogle() {
-    if (!window.firebaseAuth) {
-      banner("Firebase not configured", "move");
-      return;
-    }
-
-    try {
-      const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseProvider);
-      trackEvent("login", { method: "google" });
-
-      // Store user data in localStorage
-      localStorage.setItem(LS_USER, JSON.stringify({
-        displayName: result.user.displayName,
-        email: result.user.email,
-        photoURL: result.user.photoURL,
-        uid: result.user.uid
-      }));
-
-      // After sign-in, immediately try to load cloud state.
-      // If cloud doesn't exist, we keep local and start saving going forward.
-      const loaded = await loadCloudStateAndMaybeApply();
-      if (!loaded) {
-        banner(`Welcome, ${result.user.displayName || "User"}!`, "move");
-      }
-    } catch (error) {
-      console.error("Sign-in error:", error);
-      banner("Sign-in failed", "move");
-    }
-  }
-
-  async function signOutUser() {
-    if (!window.firebaseAuth) return;
-
-    try {
-      await window.firebaseSignOut(window.firebaseAuth);
-      currentUser = null;
-      localStorage.removeItem(LS_USER);
-      updateProfileDisplay();
-      banner("Signed out. Playing offline.", "move");
-      trackEvent("logout");
-    } catch (error) {
-      console.error("Sign-out error:", error);
-    }
   }
 
   // ---------- Game state (serialize / apply) ----------
@@ -356,73 +173,10 @@
   }
 
   // ---------- Cloud save ----------
-  function progressDocRef(uid) {
-    // Keep existing collection name for backward compatibility
-    return window.firebaseDoc(window.firebaseDb, "progress", uid);
-  }
-
-  async function saveCloudState() {
-    if (!currentUser || !window.firebaseDb) return;
-
-    const state = serializeGameState();
-    const payload = {
-      v: 1,
-      state,
-      updatedAt: window.firebaseServerTimestamp ? window.firebaseServerTimestamp() : new Date().toISOString(),
-    };
-
-    try {
-      await window.firebaseSetDoc(progressDocRef(currentUser.uid), payload, { merge: true });
-    } catch (error) {
-      console.error("Cloud save error:", error);
-    }
-  }
-
-  async function loadCloudStateAndMaybeApply() {
-    if (!currentUser || !window.firebaseDb) return false;
-
-    try {
-      const snap = await window.firebaseGetDoc(progressDocRef(currentUser.uid));
-      if (!snap.exists()) return false;
-
-      const data = snap.data();
-
-      // Backward compatibility: older saves stored top-level fields
-      const state = data.state || (data.level ? {
-        v: 1,
-        level: data.level,
-        score: data.score,
-        best: data.best,
-        soundOn: data.soundOn,
-        theme: data.theme,
-        movesLeft: 0,
-        goal: null,
-        size: 6,
-        gridColors: null,
-        savedAt: data.lastSaved,
-      } : null);
-
-      if (!state) return false;
-
-      const applied = applyGameState(state);
-      if (applied) {
-        saveLocalState(); // keep local in sync
-        trackEvent("cloud_restore", { ok: true });
-        return true;
-      }
-    } catch (error) {
-      console.error("Cloud load error:", error);
-      trackEvent("cloud_restore", { ok: false });
-    }
-    return false;
-  }
-
   // Save state:
   // - always to local (so refresh works)
-  // - to cloud only when signed in
   function saveGameState() {
     saveLocalState();
-    if (currentUser) saveCloudState();
   }
 // ===== Audio (no asset files) =====
   let ac = null;
@@ -484,16 +238,7 @@
 
   // ===== Analytics =====
 function trackEvent(eventName, parameters = {}) {
-  try {
-    if (window.firebaseAnalytics && window.firebaseLogEvent) {
-      window.firebaseLogEvent(window.firebaseAnalytics, eventName, parameters);
-    } else {
-      // keep dev noise low
-      // console.log("Analytics:", eventName, parameters);
-    }
-  } catch (e) {
-    // never break gameplay for analytics
-  }
+  // Analytics removed
 }
   const SYMBOLS = ["◆", "✦", "▲", "●", "✖"];
   const COLOR_NAMES = ["Cyan","Purple","Green","Yellow","Red"];
@@ -1467,7 +1212,6 @@ function trackEvent(eventName, parameters = {}) {
       <div class="settings-grid">
         <button class="btn" id="soundBtnModal">🔊 Sound</button>
         <button class="btn" id="themeBtnModal">🎨 Theme</button>
-        <div id="profileDisplayModal"></div>
       </div>
       <div style="text-align: center; margin-top: 20px;">
         <button class="btn" id="closeSettingsBtn">Close</button>
@@ -1480,7 +1224,6 @@ function trackEvent(eventName, parameters = {}) {
     // Update modal buttons
     updateSoundBtnModal();
     updateThemeBtnModal();
-    updateProfileDisplayModal();
 
     // Close button
     const closeBtn = qs("#closeSettingsBtn");
@@ -1516,48 +1259,6 @@ function trackEvent(eventName, parameters = {}) {
     });
   }
 
-  function updateProfileDisplayModal() {
-    const display = qs("#profileDisplayModal");
-    if (!display) return;
-
-    let user = currentUser;
-    if (!user) {
-      // Fallback to local storage
-      try {
-        const key = "firebase:authUser:AIzaSyDCnS3kCen2frvfnmi2v4yBwJXmb2853s0:[DEFAULT]";
-        const stored = localStorage.getItem(key);
-        if (stored) {
-          user = JSON.parse(stored);
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    if (user) {
-      const displayName = user.displayName || user.email || 'User';
-      const photoURL = user.photoURL;
-      if (photoURL) {
-        display.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">${displayName}`;
-      } else {
-        display.textContent = `👤 ${displayName}`;
-      }
-      display.style.cursor = "pointer";
-      display.addEventListener("click", () => {
-        if (confirm("Sign out?")) {
-          signOutUser();
-          overlay.classList.remove("show");
-        }
-      });
-    } else {
-      display.innerHTML = '<button class="btn" id="signInBtnModal">Sign In with Google</button>';
-      const signInBtn = qs("#signInBtnModal");
-      signInBtn.addEventListener("click", () => {
-        signInWithGoogle();
-      });
-    }
-  }
-
   nextBtn.addEventListener("click", () => {
     generateSolvableLevel(level);
   });
@@ -1590,27 +1291,11 @@ function trackEvent(eventName, parameters = {}) {
       </ul>
     `;
 
-    if (currentUser) {
-      body += `<br><div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; margin-top: 10px;">
-        <b>Signed in as:</b> ${currentUser.displayName || currentUser.email}<br>
-        <small>Your progress and score are automatically saved to the cloud and will sync across devices.</small><br>
-        <button class="btn" id="signOutBtn" style="margin-top: 8px;">Sign Out</button>
-      </div>`;
-    }
-
     overlayBody.innerHTML = body;
     overlayPrimary.textContent = "Close";
     closeOverlay.style.display = '';
     overlayPrimary.style.display = 'none';
     overlay.classList.add("show");
-
-    const signOutBtn = qs("#signOutBtn");
-    if (signOutBtn) {
-      signOutBtn.addEventListener("click", () => {
-        signOutUser();
-        overlay.classList.remove("show");
-      });
-    }
   });
 
   hintBtn.addEventListener("click", () => {
@@ -1748,8 +1433,6 @@ function trackEvent(eventName, parameters = {}) {
         });
     });
   }
-
-  initFirebase();
 
   // Bootstrap from local state immediately, regardless of Firebase load status
   if (!hasBootstrapped) {
