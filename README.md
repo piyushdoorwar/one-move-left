@@ -1,73 +1,170 @@
-# React + TypeScript + Vite
+# One Move Left
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A tile-matching puzzle game where players swipe to move tiles on a 6x6 grid, aiming to create chains of matching tiles that pop in neon chain reactions. The game features limited moves per level, with goals that must be completed before moves run out. Levels increase in difficulty as you progress.
 
-Currently, two official plugins are available:
+## How to Play
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Objective
+Complete the mission goal for each level before your moves run out. Missions vary and include popping a specific number of tiles, clearing certain colors, or reducing board density.
 
-## React Compiler
+### Gameplay Mechanics
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+#### Board and Tiles
+- The game is played on a 6x6 grid.
+- Tiles come in 5 colors, each represented by a unique symbol:
+  - Cyan: ◆
+  - Purple: ✦
+  - Green: ▲
+  - Yellow: ●
+  - Red: ✖
 
-## Expanding the ESLint configuration
+#### Moves
+- Players make moves by swiping the board in one of four directions: left, right, up, or down.
+- All tiles slide in the chosen direction until they hit the edge or another tile.
+- Each level has a limited number of moves (displayed as "Moves left").
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+#### Matching and Popping
+- After a move, the game checks for clusters of 3 or more adjacent tiles of the same color (horizontal or vertical adjacency).
+- Matching clusters pop simultaneously, creating a "neon chain pop" effect.
+- Popping can trigger additional matches in the same move, forming chains.
+- Chains can continue up to 12 steps in a single move.
+- Tiles fall into empty spaces after popping, potentially creating new matches.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+#### Scoring
+- Points are awarded for each tile popped.
+- Base score: 10 points per tile.
+- Bonus: Additional 5 points per tile beyond the minimum cluster size (3).
+- Chain multiplier: Each chain step multiplies the score for that step.
+- High scores are saved locally as "Best".
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+#### Goals (Missions)
+Levels have specific goals that must be achieved:
+- **Pop Total**: Pop a specific number of tiles in total.
+- **Clear Color**: Eliminate a certain number of tiles of a specific color.
+- **Clear Multi**: Clear multiple specific colors (e.g., 5 Cyan + 3 Purple).
+- **Density Below**: Reduce the board to a certain percentage filled or less.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+#### Level Progression
+- Completing a goal advances to the next level.
+- Levels increase in difficulty through:
+  - Fewer moves allowed
+  - More complex goals
+  - Higher tile density
+  - Larger board sizes (potentially, though current is 6x6)
+
+#### Losing
+- If moves reach 0 without completing the goal, the level fails.
+- Players can retry the level or start over.
+
+#### Winning
+- Successfully complete the goal before moves run out.
+- Progress to the next level automatically.
+
+## Controls
+- **Swipe**: Drag in any direction to move tiles.
+- **Start/Next**: Begin a new level or proceed to the next.
+- **Retry**: Restart the current level.
+- **Sound**: Toggle sound effects on/off.
+
+## Tips
+- One swipe can trigger multiple pops through chains.
+- Look for setups that create long chains for higher scores.
+- Plan moves to clear required colors or meet density goals.
+- Chain reactions can help achieve goals more efficiently.
+
+## Features
+- Responsive design for mobile and desktop
+- Local storage for best score and sound preferences
+- Accessibility features with ARIA labels and keyboard navigation
+- Neon-themed visual effects
+- Progressive difficulty levels
+
+## Progressive Web App (PWA)
+
+This game is now a Progressive Web App with the following features:
+- **Installable**: Can be installed on mobile devices and desktops
+- **Offline Play**: Works offline thanks to service worker caching
+- **Responsive Design**: Optimized for all screen sizes
+- **Fast Loading**: Cached resources for quick startup
+
+### PWA Setup Notes
+- The app includes a web app manifest (`manifest.json`) and service worker (`sw.js`)
+- SVG favicon (`favicon.svg`) has been added for browser tabs
+- For full PWA installation support, PNG icons should be created:
+  - `icon-192.png` (192x192 pixels)
+  - `icon-512.png` (512x512 pixels)
+- For production deployment, serve over HTTPS for full PWA functionality
+
+## Setup and Installation
+
+1. Clone or download the repository
+2. Open `index.html` in a web browser
+3. Start playing!
+
+## Cloud Save Setup (Optional)
+
+The game supports Google sign-in for cloud saving of progress across devices. To enable this feature:
+
+1. Create a Firebase project at https://console.firebase.google.com/
+2. Enable Google Authentication in Authentication > Sign-in method
+3. Enable Firestore Database in Firestore Database
+4. Enable Analytics in Analytics > Dashboard (automatically enabled with Firebase)
+5. Get your Firebase config from Project settings > General > Your apps
+6. Replace the placeholder config in `index.html` with your actual Firebase config:
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "YOUR_API_KEY",
+     authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+     projectId: "YOUR_PROJECT_ID",
+     storageBucket: "YOUR_PROJECT_ID.appspot.com",
+     messagingSenderId: "YOUR_SENDER_ID",
+     appId: "YOUR_APP_ID"
+   };
+   ```
+6. Set up Firestore security rules to allow authenticated users to read/write their own progress:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /progress/{userId} {
+         allow read, write: if request.auth != null && request.auth.uid == userId;
+       }
+     }
+   }
+   ```
+
+Once configured, users can sign in with Google to sync their progress across devices.
+
+## Deployment
+
+The game is configured for Firebase Hosting with automatic deployment via GitHub Actions.
+
+### Firebase Hosting Setup
+
+1. Install Firebase CLI: `npm install -g firebase-tools`
+2. Login to Firebase: `firebase login`
+3. Initialize hosting: `firebase init hosting` (select your project)
+4. The `firebase.json` and `.firebaserc` files are already configured
+5. For GitHub Actions deployment, add `FIREBASE_TOKEN` secret:
+   - Generate token: `firebase login:ci`
+   - Add to GitHub repository secrets as `FIREBASE_TOKEN`
+
+### Manual Deployment
+
+To deploy manually:
+```bash
+firebase deploy --only hosting --project one-move-left
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The site will be available at: `https://one-move-left.web.app`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Technical Details
+- Built with vanilla JavaScript, HTML, and CSS
+- No external frameworks or libraries required
+- Uses local storage for game state persistence
+- Includes Cloudflare Web Analytics tracking
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Accessibility
+- The game includes ARIA labels for screen readers.
+- Keyboard navigation is supported.
+- Sound effects can be toggled.
