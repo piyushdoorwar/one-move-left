@@ -461,8 +461,8 @@ header{
 
 .mLevel{
   color:var(--muted);
-  font-size:10px;
-  font-weight:600;
+  font-size:13px;
+  font-weight:700;
   line-height:1;
 }
 
@@ -642,10 +642,16 @@ header{
 .orb .sym{
   position:relative;
   z-index:2;
-  font-size:26px;
+  width:40%;
+  height:40%;
   color:rgba(0,0,0,.7);
-  text-shadow:0 4px 12px rgba(0,0,0,.4), 0 2px 4px rgba(255,255,255,.3);
-  filter:drop-shadow(0 0 4px rgba(255,255,255,.5));
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.4)) drop-shadow(0 0 6px rgba(255,255,255,.4));
+}
+
+.orb .sym svg{
+  width:100%;
+  height:100%;
+  display:block;
 }
 
 /* vibrant neon colors */
@@ -654,40 +660,35 @@ header{
   box-shadow:
     0 0 0 2px rgba(0,217,255,.4) inset,
     0 20px 40px rgba(0,0,0,.6),
-    0 0 30px rgba(0,217,255,.5),
-    0 0 50px rgba(0,217,255,.3);
+    0 0 8px rgba(0,217,255,.3);
 }
 .orb[data-c="1"]{
   background:linear-gradient(135deg, rgba(124,58,237,1) 0%, rgba(100,45,200,0.9) 100%);
   box-shadow:
     0 0 0 2px rgba(124,58,237,.4) inset,
     0 20px 40px rgba(0,0,0,.6),
-    0 0 30px rgba(124,58,237,.5),
-    0 0 50px rgba(124,58,237,.3);
+    0 0 8px rgba(124,58,237,.3);
 }
 .orb[data-c="2"]{
   background:linear-gradient(135deg, rgba(39,255,155,1) 0%, rgba(30,220,130,0.9) 100%);
   box-shadow:
     0 0 0 2px rgba(39,255,155,.4) inset,
     0 20px 40px rgba(0,0,0,.6),
-    0 0 30px rgba(39,255,155,.5),
-    0 0 50px rgba(39,255,155,.3);
+    0 0 8px rgba(39,255,155,.3);
 }
 .orb[data-c="3"]{
   background:linear-gradient(135deg, rgba(255,217,61,1) 0%, rgba(255,200,40,0.9) 100%);
   box-shadow:
     0 0 0 2px rgba(255,217,61,.4) inset,
     0 20px 40px rgba(0,0,0,.6),
-    0 0 30px rgba(255,217,61,.5),
-    0 0 50px rgba(255,217,61,.3);
+    0 0 8px rgba(255,217,61,.3);
 }
 .orb[data-c="4"]{
   background:linear-gradient(135deg, rgba(255,59,109,1) 0%, rgba(220,45,95,0.9) 100%);
   box-shadow:
     0 0 0 2px rgba(255,59,109,.4) inset,
     0 20px 40px rgba(0,0,0,.6),
-    0 0 30px rgba(255,59,109,.5),
-    0 0 50px rgba(255,59,109,.3);
+    0 0 8px rgba(255,59,109,.3);
 }
 
 .orb.pop{animation:pop .2s cubic-bezier(.34,1.56,.64,1);}

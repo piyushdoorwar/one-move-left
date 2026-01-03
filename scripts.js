@@ -260,7 +260,40 @@
 function trackEvent(eventName, parameters = {}) {
   // Analytics removed
 }
-  const SYMBOLS = ["◆", "✦", "▲", "●", "✖"];
+  const SYMBOL_THEMES = {
+    animals: [
+      `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-1 0-2 .5-3 1.5L7 5.5C6 6.5 5 8 5 10v2c0 1.5.5 3 1.5 4L8 17.5c.5 1 1.5 2 2.5 2.5L12 21l1.5-1c1-.5 2-1.5 2.5-2.5l1.5-1.5c1-1 1.5-2.5 1.5-4v-2c0-2-1-3.5-2-4.5L15 3.5c-1-1-2-1.5-3-1.5zm-2 6c.5 0 1 .5 1 1s-.5 1-1 1-1-.5-1-1 .5-1 1-1zm4 0c.5 0 1 .5 1 1s-.5 1-1 1-1-.5-1-1 .5-1 1-1z"/></svg>`, // Fox
+      `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9 7H6v8c0 3 2 5 6 5s6-2 6-5V7h-3l-3-5zM9 10c.5 0 1 .5 1 1s-.5 1-1 1-1-.5-1-1 .5-1 1-1zm6 0c.5 0 1 .5 1 1s-.5 1-1 1-1-.5-1-1 .5-1 1-1zm-3 4c1 0 2 .5 2 1.5s-1 1.5-2 1.5-2-.5-2-1.5 1-1.5 2-1.5z"/></svg>`, // Cat
+      `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/><circle cx="9" cy="11" r="1.5" fill="#fff"/><circle cx="15" cy="11" r="1.5" fill="#fff"/><path d="M8 8L6 6M16 8l2-2M9 15c.5.5 1.5 1 3 1s2.5-.5 3-1"/></svg>`, // Owl
+      `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 6l2-4h-2c-2 0-3 1-4 2-1-1-2-2-4-2H8l2 4c-2 1-3 3-3 6 0 4 3 8 5 10 2-2 5-6 5-10 0-3-1-5-3-6z"/><circle cx="10" cy="10" r="1" fill="#fff"/></svg>`, // Rabbit
+      `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-3 0-6 2-7 5-.5 1-.5 3 0 4 .5 2 2 4 4 5 1 .5 2 .5 3 .5s2 0 3-.5c2-1 3.5-3 4-5 .5-1 .5-3 0-4-1-3-4-5-7-5zm-2 5c.5 0 1 .5 1 1s-.5 1-1 1-1-.5-1-1 .5-1 1-1zm4 0c.5 0 1 .5 1 1s-.5 1-1 1-1-.5-1-1 .5-1 1-1z"/><path d="M3 10l2 1-2 1m18-2l-2 1 2 1"/></svg>` // Fish
+    ],
+    fruits: [
+      `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="13" r="7"/><path d="M12 6c0-2 1-4 3-4 1 0 1 1 1 2-1 0-2 0-2 1s1 1 2 1c0 1 0 2-1 2-2 0-3-1-3-2z"/></svg>`, // Apple
+      `<svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="12" cy="13" rx="6" ry="8"/><path d="M12 5l1-3h2l-1 3z"/></svg>`, // Lemon
+      `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="10" r="4"/><circle cx="14" cy="8" r="3.5"/><circle cx="16" cy="14" r="4"/><circle cx="10" cy="16" r="3.5"/></svg>`, // Grapes
+      `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/><path d="M6 12c2-2 4-3 6-3s4 1 6 3" stroke="#000" stroke-width="1.5" fill="none"/><circle cx="9" cy="10" r="1" fill="#000"/><circle cx="15" cy="14" r="1" fill="#000"/></svg>`, // Watermelon
+      `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="10" cy="14" r="5"/><circle cx="15" cy="13" r="4.5"/><path d="M12 6c1-2 2-4 3-4s1 1 1 2l-2 3-2-1z"/></svg>` // Cherry
+    ],
+    landscape: [
+      `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18l5-8 4 4 5-8 4 6v6H3z"/></svg>`, // Mountain
+      `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="10" y="14" width="4" height="8"/><circle cx="12" cy="9" r="6"/><circle cx="8" cy="7" r="3"/><circle cx="16" cy="7" r="3"/><circle cx="12" cy="5" r="2.5"/></svg>`, // Tree
+      `<svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="12" cy="12" rx="10" ry="6"/><ellipse cx="7" cy="11" rx="4" ry="3"/><ellipse cx="17" cy="11" rx="4" ry="3"/></svg>`, // Cloud
+      `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4M5 5l3 3m8 8l3 3M5 19l3-3m8-8l3-3"/></svg>`, // Sun
+      `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.5 7.5H22l-6 4.5 2.5 7.5L12 17l-6.5 4.5L8 14 2 9.5h7.5z"/></svg>` // Star
+    ],
+    flowers: [
+      `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="7" rx="2.5" ry="4"/><ellipse cx="12" cy="17" rx="2.5" ry="4"/><ellipse cx="7" cy="12" rx="4" ry="2.5"/><ellipse cx="17" cy="12" rx="4" ry="2.5"/></svg>`, // Rose
+      `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6c-2 0-3 2-3 4s1 3 3 3 3-1 3-3-1-4-3-4z"/><rect x="11" y="13" width="2" height="8"/><ellipse cx="9" cy="22" rx="3" ry="1"/></svg>`, // Tulip
+      `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2.5"/><ellipse cx="12" cy="7" rx="1.5" ry="3" transform="rotate(0 12 12)"/><ellipse cx="12" cy="7" rx="1.5" ry="3" transform="rotate(45 12 12)"/><ellipse cx="12" cy="7" rx="1.5" ry="3" transform="rotate(90 12 12)"/><ellipse cx="12" cy="7" rx="1.5" ry="3" transform="rotate(135 12 12)"/><ellipse cx="12" cy="7" rx="1.5" ry="3" transform="rotate(180 12 12)"/><ellipse cx="12" cy="7" rx="1.5" ry="3" transform="rotate(225 12 12)"/><ellipse cx="12" cy="7" rx="1.5" ry="3" transform="rotate(270 12 12)"/><ellipse cx="12" cy="7" rx="1.5" ry="3" transform="rotate(315 12 12)"/></svg>`, // Daisy
+      `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="5" r="2.5"/><circle cx="17.5" cy="7.5" r="2.5"/><circle cx="19" cy="12" r="2.5"/><circle cx="17.5" cy="16.5" r="2.5"/><circle cx="12" cy="19" r="2.5"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="5" cy="12" r="2.5"/><circle cx="6.5" cy="7.5" r="2.5"/></svg>`, // Sunflower
+      `<svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="12" cy="10" rx="3" ry="4"/><ellipse cx="8" cy="12" rx="3" ry="4" transform="rotate(-30 8 12)"/><ellipse cx="16" cy="12" rx="3" ry="4" transform="rotate(30 16 12)"/><ellipse cx="7" cy="16" rx="2.5" ry="3.5" transform="rotate(-60 7 16)"/><ellipse cx="17" cy="16" rx="2.5" ry="3.5" transform="rotate(60 17 16)"/><circle cx="12" cy="13" r="2"/></svg>` // Lotus
+    ]
+  };
+  
+  let currentTheme = "animals";
+  let SYMBOLS = SYMBOL_THEMES.animals;
+  
   const COLOR_NAMES = ["Cyan","Purple","Green","Yellow","Red"];
 
   // ===== Game config =====
@@ -1010,6 +1043,11 @@ function trackEvent(eventName, parameters = {}) {
 
   // ===== Generate a solvable level =====
   async function generateSolvableLevel(lv) {
+    // Pick a random theme for this level
+    const themes = Object.keys(SYMBOL_THEMES);
+    currentTheme = themes[Math.floor(Math.random() * themes.length)];
+    SYMBOLS = SYMBOL_THEMES[currentTheme];
+    
     showGenerating(`Generating level ${lv} (solvable)…`);
 
     size = pickSizeForLevel(lv);
@@ -1099,6 +1137,11 @@ function trackEvent(eventName, parameters = {}) {
   }
 
   function loadStoredLevel() {
+    // Pick a random theme when loading stored level too
+    const themes = Object.keys(SYMBOL_THEMES);
+    currentTheme = themes[Math.floor(Math.random() * themes.length)];
+    SYMBOLS = SYMBOL_THEMES[currentTheme];
+    
     hideOverlay();
     emptyGrid();
 
@@ -1244,16 +1287,15 @@ function trackEvent(eventName, parameters = {}) {
   }
 
   nextBtn.addEventListener("click", () => {
-    generateSolvableLevel(level);
-  });
-  retryBtn.addEventListener("click", () => {
-    trackEvent('level_retry', {
-      level: level,
-      has_saved_level: !!(currentLevelGrid && currentLevelGoal && currentLevelMoves > 0)
-    });
+    // If there's a saved level (user is in middle of a level), retry it
     if (currentLevelGrid && currentLevelGoal && currentLevelMoves > 0) {
+      trackEvent('level_retry', {
+        level: level,
+        has_saved_level: true
+      });
       loadStoredLevel();
     } else {
+      // Otherwise generate new level
       generateSolvableLevel(level);
     }
   });
