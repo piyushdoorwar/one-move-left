@@ -2,13 +2,13 @@
   "name": "One Move Left",
   "short_name": "One Move Left",
   "description": "A tile-matching puzzle game with limited moves and neon chain reactions",
-  "start_url": "/",
+  "start_url": "https://piyushdoorwar.github.io/one-move-left/",
   "display": "standalone",
   "background_color": "#070817",
   "theme_color": "#00e5ff",
   "orientation": "portrait-primary",
   "categories": ["games", "puzzle"],
-  "scope": "https://one-move-left.web.app/",
+  "scope": "https://piyushdoorwar.github.io/one-move-left/",
   "lang": "en",
   "icons": [
     {
