@@ -26,30 +26,6 @@
   --shadow:0 18px 60px rgba(0,0,0,.55);
 }
 
-.ubuntu-theme{
-  --bg:#2C001E;
-  --panel:#3D1B2B;
-  --panel2:#2A0F1F;
-  --text:#FFFFFF;
-  --muted:#B0B0B0;
-
-  --accent:#E95420;
-  --secondary:#77216F;
-  --tertiary:#5E2750;
-
-  --accent-rgb:233,84,32;
-  --secondary-rgb:119,33,111;
-  --panel-rgb:61,27,43;
-  --panel2-rgb:42,15,31;
-
-  --body-bg: 
-    radial-gradient(1200px 700px at 15% -10%, rgba(233,84,32,.18), transparent 60%),
-    radial-gradient(900px 600px at 110% 20%, rgba(119,33,111,.16), transparent 60%),
-    radial-gradient(900px 600px at 50% 120%, rgba(94,39,80,.12), transparent 60%),
-    linear-gradient(180deg, #2C001E, #1A0012),
-    var(--bg);
-}
-
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -60,10 +36,6 @@ body{
   display:flex;
   justify-content:center;
   padding:16px;
-}
-
-.ubuntu-theme body{
-  font-family: 'Ubuntu', sans-serif;
 }
 
 .app{width:min(96vw,720px)}
@@ -95,9 +67,6 @@ header{
   text-align:center;
 }
 
-.ubuntu-theme .pill{
-  background:linear-gradient(180deg, rgba(0,0,0,.06), rgba(0,0,0,.02));
-}
 .label{font-size:12px; color:var(--muted)}
 .value{font-weight:900; font-size:18px}
 
@@ -114,9 +83,6 @@ header{
   box-shadow:0 10px 30px rgba(0,0,0,.35);
 }
 
-.ubuntu-theme .btn{
-  background:linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.03));
-}
 .btn:active{transform:translateY(1px)}
 .btn.primary{
   border-color:rgba(var(--accent-rgb),.28);
@@ -125,6 +91,16 @@ header{
 .btn.ghost{
   background:transparent;
   border:1px dashed rgba(var(--secondary-rgb),.28);
+}
+
+.btn svg{
+  display:inline-block;
+  vertical-align:middle;
+  margin-right:4px;
+}
+
+.btn.primary svg{
+  margin-right:6px;
 }
 
 .bannerSlot{height:44px; display:flex; align-items:center}
@@ -140,17 +116,10 @@ header{
   color:var(--muted);
 }
 
-.ubuntu-theme .banner{
-  border:1px solid rgba(0,0,0,.08);
-  background:rgba(0,0,0,.04);
-}
 .banner.show{opacity:1; transform:translateY(0)}
 .banner.good{color:#031a12; background:rgba(39,255,155,.18); border-color:rgba(39,255,155,.28)}
-.ubuntu-theme .banner.good{color:#031a12; background:rgba(39,255,155,.18); border-color:rgba(39,255,155,.28)}
 .banner.bad{color:#24040e; background:rgba(255,59,107,.18); border-color:rgba(255,59,107,.32)}
-.ubuntu-theme .banner.bad{color:#24040e; background:rgba(255,59,107,.18); border-color:rgba(255,59,107,.32)}
 .banner.move{color:#fff; background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.4); text-shadow:0 0 8px #fff, 0 0 16px #fff, 0 0 24px #fff; font-weight:900}
-.ubuntu-theme .banner.move{color:#fff; background:rgba(0,0,0,.2); border-color:rgba(0,0,0,.4); text-shadow:0 0 8px #000, 0 0 16px #000, 0 0 24px #000; font-weight:900}
 
 .layout{
   display:grid;
@@ -165,10 +134,6 @@ header{
   background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
   border:1px solid rgba(var(--secondary-rgb),.18);
   box-shadow:0 0 0 1px rgba(var(--accent-rgb),.10) inset, var(--shadow);
-}
-
-.ubuntu-theme .missionCard{
-  background:linear-gradient(180deg, rgba(0,0,0,.06), rgba(0,0,0,.02));
 }
 
 .mTop{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px}
@@ -209,10 +174,6 @@ header{
     var(--shadow);
   touch-action:none;
   overflow:hidden;
-}
-
-.ubuntu-theme .board{
-  background:linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.02));
 }
 
 /* grid background */

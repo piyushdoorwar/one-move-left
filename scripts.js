@@ -16,21 +16,17 @@
   const retryBtn = qs("#retryBtn");
   const howBtn = qs("#howBtn");
   const hintBtn = qs("#hintBtn");
-  const settingsBtn = qs("#settingsBtn");
 
   // ===== Constants =====
   const LS_BEST = "onemoveleft:best";
   const LS_SOUND = "onemoveleft:soundOn";
-  const LS_THEME = "onemoveleft:theme";
 
   // ===== Variables =====
   let best = parseInt(localStorage.getItem(LS_BEST) || "0", 10);
   let soundOn = (localStorage.getItem(LS_SOUND) ?? "1") === "1";
-  let theme = localStorage.getItem(LS_THEME) || "default";
 
   // Initialize UI
   bestEl.textContent = best;
-  if (theme === "ubuntu") document.body.classList.add("ubuntu-theme");
 
   // Local (offline) save so the game survives refresh
   const LS_STATE = "onemoveleft:state:v1";
@@ -91,7 +87,6 @@
       currentLevelMoves,
       // solutionMoves is optional; omit to keep doc small
       soundOn,
-      theme,
       savedAt: new Date().toISOString(),
     };
   }
@@ -103,11 +98,6 @@
     if (typeof state.soundOn === "boolean") {
       soundOn = state.soundOn;
       localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
-    }
-    if (state.theme) {
-      theme = state.theme;
-      localStorage.setItem(LS_THEME, theme);
-      document.body.classList.toggle("ubuntu-theme", theme === "ubuntu");
     }
 
     // Score / best
@@ -1206,57 +1196,14 @@ function trackEvent(eventName, parameters = {}) {
   }
 
   // ===== Buttons & overlay actions =====
-  function showSettingsOverlay() {
-    overlayTitle.textContent = "Settings";
-    overlayBody.innerHTML = `
-      <div class="settings-grid">
-        <button class="btn" id="soundBtnModal">🔊 Sound</button>
-        <button class="btn" id="themeBtnModal">🎨 Theme</button>
-      </div>
-      <div style="text-align: center; margin-top: 20px;">
-        <button class="btn" id="closeSettingsBtn">Close</button>
-      </div>
-    `;
-    closeOverlay.style.display = 'none';
-    overlayPrimary.style.display = 'none';
-    overlay.classList.add("show");
-
-    // Update modal buttons
-    updateSoundBtnModal();
-    updateThemeBtnModal();
-
-    // Close button
-    const closeBtn = qs("#closeSettingsBtn");
-    closeBtn.addEventListener("click", () => {
-      overlay.classList.remove("show");
-    });
-  }
-
-  function updateSoundBtnModal() {
-    const btn = qs("#soundBtnModal");
-    if (!btn) return;
-    btn.textContent = soundOn ? "🔊 Sound On" : "🔇 Sound Off";
-    btn.setAttribute("aria-pressed", String(soundOn));
-    btn.addEventListener("click", () => {
-      soundOn = !soundOn;
-      localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
-      updateSoundBtnModal();
-      trackEvent('sound_toggle', { sound_enabled: soundOn });
-      if (soundOn) { initAudio(); goodSound(); }
-    });
-  }
-
-  function updateThemeBtnModal() {
-    const btn = qs("#themeBtnModal");
-    if (!btn) return;
-    btn.textContent = theme === "ubuntu" ? "🎨 Ubuntu Theme" : "🎨 Default Theme";
-    btn.addEventListener("click", () => {
-      theme = theme === "ubuntu" ? "default" : "ubuntu";
-      localStorage.setItem(LS_THEME, theme);
-      document.body.classList.toggle("ubuntu-theme", theme === "ubuntu");
-      updateThemeBtnModal();
-      trackEvent('theme_toggle', { theme: theme });
-    });
+  function updateSoundButton() {
+    const soundBtn = qs("#soundBtn");
+    if (!soundBtn) return;
+    const soundWaves = soundBtn.querySelector(".sound-waves");
+    const soundText = soundBtn.querySelector(".sound-text");
+    if (soundWaves) soundWaves.style.display = soundOn ? "" : "none";
+    if (soundText) soundText.textContent = soundOn ? "Sound" : "Muted";
+    soundBtn.setAttribute("aria-pressed", String(soundOn));
   }
 
   nextBtn.addEventListener("click", () => {
@@ -1274,9 +1221,18 @@ function trackEvent(eventName, parameters = {}) {
     }
   });
 
-  settingsBtn.addEventListener("click", () => {
-    showSettingsOverlay();
-  });
+  const soundBtn = qs("#soundBtn");
+  if (soundBtn) {
+    updateSoundButton();
+    soundBtn.addEventListener("click", () => {
+      soundOn = !soundOn;
+      localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
+      updateSoundButton();
+      trackEvent('sound_toggle', { sound_enabled: soundOn });
+      if (soundOn) { initAudio(); goodSound(); }
+      saveGameState();
+    });
+  }
 
   howBtn.addEventListener("click", () => {
     trackEvent('help_opened');
