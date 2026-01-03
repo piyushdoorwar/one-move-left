@@ -1,12 +1,12 @@
 const CACHE_NAME = 'one-move-left-v2';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/scripts.js',
-  '/manifest.json',
-  '/manifest.webmanifest',
-  '/favicon.svg'
+  './',
+  './index.html',
+  './styles.css',
+  './scripts.js',
+  './manifest.json',
+  './manifest.webmanifest',
+  './favicon.svg'
 ];
 
 // Install service worker

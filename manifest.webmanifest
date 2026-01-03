@@ -4,6 +4,7 @@
   "description": "A tile-matching puzzle game with limited moves and neon chain reactions",
   "start_url": "./index.html",
   "display": "standalone",
+  "scope": "./",
   "background_color": "#0d0d0d",
   "theme_color": "#00e5ff",
   "orientation": "portrait",
