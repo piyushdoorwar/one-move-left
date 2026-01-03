@@ -61,6 +61,22 @@
       </button>
     </div>
 
+    <div class="sound-controls" id="soundControls">
+      <div class="sound-control-panel">
+        <label class="sound-label">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 3L5 6H2v4h3l3 3V3z"/>
+            <path d="M11.5 8c0-1.38-.63-2.63-1.63-3.46v6.92c1-.83 1.63-2.08 1.63-3.46z"/>
+          </svg>
+          <span>Volume</span>
+        </label>
+        <div class="volume-slider-wrap">
+          <input type="range" id="volumeSlider" min="0" max="100" value="50" class="volume-slider">
+          <span class="volume-value" id="volumeValue">50%</span>
+        </div>
+      </div>
+    </div>
+
     <div class="bannerSlot">
       <div id="banner" class="banner" aria-live="polite"></div>
     </div>
@@ -70,13 +86,14 @@
       <aside class="mission">
         <div class="missionCard">
           <div class="mTop">
-            <div class="mTitle">Mission</div>
-            <div class="mLevel">Level <span id="level">1</span></div>
-          </div>
-
-          <div class="mRow">
-            <div class="mLabel">Moves left</div>
-            <div class="mValue neon" id="movesLeft">3</div>
+            <div class="mTitleGroup">
+              <div class="mTitle">Mission</div>
+              <div class="mLevel">Lv <span id="level">1</span></div>
+            </div>
+            <div class="mMovesGroup">
+              <div class="mLabel">Moves</div>
+              <div class="mValue neon" id="movesLeft">3</div>
+            </div>
           </div>
 
           <div class="mRow">
@@ -107,10 +124,6 @@
         </div>
       </main>
     </div>
-
-    <footer>
-      <div class="hint">Tip: One swipe can trigger multiple pops. Look for chain setups.</div>
-    </footer>
   </div>
 
   <script src="scripts.js"></script>

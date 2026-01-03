@@ -20,10 +20,12 @@
   // ===== Constants =====
   const LS_BEST = "onemoveleft:best";
   const LS_SOUND = "onemoveleft:soundOn";
+  const LS_VOLUME = "onemoveleft:volume";
 
   // ===== Variables =====
   let best = parseInt(localStorage.getItem(LS_BEST) || "0", 10);
   let soundOn = (localStorage.getItem(LS_SOUND) ?? "1") === "1";
+  let volume = parseFloat(localStorage.getItem(LS_VOLUME) || "0.5");
 
   // Initialize UI
   bestEl.textContent = best;
@@ -87,6 +89,7 @@
       currentLevelMoves,
       // solutionMoves is optional; omit to keep doc small
       soundOn,
+      volume,
       savedAt: new Date().toISOString(),
     };
   }
@@ -98,6 +101,10 @@
     if (typeof state.soundOn === "boolean") {
       soundOn = state.soundOn;
       localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
+    }
+    if (typeof state.volume === "number") {
+      volume = state.volume;
+      localStorage.setItem(LS_VOLUME, String(volume));
     }
 
     // Score / best
@@ -186,33 +193,56 @@
     } catch {}
   }
 
-  function beep(freq=520, ms=80, vol=0.09) {
+  function beep(freq=520, ms=80, vol=0.09, type="sine") {
     if (!soundOn) return;
     initAudio();
     if (!ac) return;
 
     const o = ac.createOscillator();
     const g = ac.createGain();
-    o.type = "sine";
+    o.type = type;
     o.frequency.value = freq;
     g.gain.value = 0.0001;
     o.connect(g).connect(ac.destination);
 
     const t0 = ac.currentTime;
+    const actualVol = vol * volume;
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.linearRampToValueAtTime(vol, t0 + 0.02);
+    g.gain.linearRampToValueAtTime(actualVol, t0 + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + ms/1000);
 
     o.start(t0);
     o.stop(t0 + ms/1000 + 0.02);
   }
 
+  function playChord(freqs, ms=100, vol=0.08) {
+    if (!soundOn) return;
+    initAudio();
+    if (!ac) return;
+
+    freqs.forEach((freq, i) => {
+      setTimeout(() => beep(freq, ms, vol * (1 - i * 0.1)), i * 20);
+    });
+  }
+
   function popSound(popped, chainStep) {
     const intensity = Math.min(popped / 5 + chainStep, 8);
-    beep(400 + intensity*30, 100 + intensity*20, (0.15 + intensity*0.03) * 2);
+    const baseFreq = 400 + intensity * 35;
+    beep(baseFreq, 80 + intensity * 15, (0.15 + intensity * 0.025) * 2.5, "triangle");
+    // Add harmonic
+    setTimeout(() => {
+      beep(baseFreq * 1.5, 60 + intensity * 10, (0.08 + intensity * 0.015) * 2, "sine");
+    }, 15);
   }
-  function goodSound() { beep(740, 120, 0.20); }
-  function badSound() { beep(220, 140, 0.20); }
+  
+  function goodSound() {
+    playChord([523, 659, 784], 120, 0.25);
+  }
+  
+  function badSound() {
+    beep(220, 100, 0.18, "sawtooth");
+    setTimeout(() => beep(180, 120, 0.20, "sawtooth"), 80);
+  }
 
   // ===== Banner (no CLS) =====
   let bannerTimer = null;
@@ -1206,6 +1236,13 @@ function trackEvent(eventName, parameters = {}) {
     soundBtn.setAttribute("aria-pressed", String(soundOn));
   }
 
+  function updateVolumeDisplay() {
+    const volumeSlider = qs("#volumeSlider");
+    const volumeValue = qs("#volumeValue");
+    if (volumeSlider) volumeSlider.value = Math.round(volume * 100);
+    if (volumeValue) volumeValue.textContent = Math.round(volume * 100) + "%";
+  }
+
   nextBtn.addEventListener("click", () => {
     generateSolvableLevel(level);
   });
@@ -1225,11 +1262,38 @@ function trackEvent(eventName, parameters = {}) {
   if (soundBtn) {
     updateSoundButton();
     soundBtn.addEventListener("click", () => {
-      soundOn = !soundOn;
-      localStorage.setItem(LS_SOUND, soundOn ? "1" : "0");
-      updateSoundButton();
-      trackEvent('sound_toggle', { sound_enabled: soundOn });
-      if (soundOn) { initAudio(); goodSound(); }
+      const soundControls = qs("#soundControls");
+      const isVisible = soundControls.classList.contains("show");
+      
+      if (isVisible) {
+        soundControls.classList.remove("show");
+      } else {
+        soundControls.classList.add("show");
+        updateVolumeDisplay();
+      }
+    });
+  }
+
+  // Volume slider
+  const volumeSlider = qs("#volumeSlider");
+  const volumeValue = qs("#volumeValue");
+  if (volumeSlider && volumeValue) {
+    updateVolumeDisplay();
+    
+    volumeSlider.addEventListener("input", (e) => {
+      volume = e.target.value / 100;
+      volumeValue.textContent = e.target.value + "%";
+      localStorage.setItem(LS_VOLUME, String(volume));
+      
+      // Enable sound if changing volume
+      if (!soundOn) {
+        soundOn = true;
+        localStorage.setItem(LS_SOUND, "1");
+        updateSoundButton();
+      }
+      
+      // Play preview sound
+      beep(440, 80, 0.15, "sine");
       saveGameState();
     });
   }
